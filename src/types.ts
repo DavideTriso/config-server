@@ -5,7 +5,7 @@ export interface Configuration {
   _id?: ObjectId;
   key: string;
   userId: string;
-  value: any; // JSON value
+  value: unknown; // JSON value - can be any valid JSON type
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -13,7 +13,7 @@ export interface Configuration {
 export interface ConfigurationUpsertResult {
   key: string;
   userId: string;
-  value: any;
+  value: unknown;
   updatedAt: Date;
   upserted: boolean;
 }

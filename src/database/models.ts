@@ -17,7 +17,7 @@ export class ConfigModel {
     return await this.getCollection().findOne({ key, userId });
   }
 
-  async upsert(key: string, userId: string, value: any): Promise<ConfigurationUpsertResult> {
+  async upsert(key: string, userId: string, value: unknown): Promise<ConfigurationUpsertResult> {
     const result = await this.getCollection().updateOne(
       { key, userId },
       { 

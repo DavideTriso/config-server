@@ -9,7 +9,8 @@
     "dev": "ts-node index.ts",
     "token": "ts-node src/cli/token-manager.ts",
     "test": "jest",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
   },
   "bin": {
     "config-server-token": "./dist/src/cli/token-manager.js"

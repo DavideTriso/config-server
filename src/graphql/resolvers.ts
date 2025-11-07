@@ -10,7 +10,7 @@ interface GetConfigurationArgs {
 
 interface UpsertConfigurationArgs {
   key: string;
-  value: any;
+  value: unknown;
 }
 
 const resolvers = {

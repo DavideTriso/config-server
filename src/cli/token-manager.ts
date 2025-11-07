@@ -8,6 +8,7 @@ dotenv.config();
 
 import db from '../database/connection';
 import { TokenModel } from '../database/models';
+import { TokenCreateInput } from '../types';
 
 const tokenModel = new TokenModel();
 
@@ -40,7 +41,7 @@ program
       await ensureConnection();
       
       const token = generateToken();
-      const tokenData: any = {
+      const tokenData: TokenCreateInput = {
         token,
         userId: options.userId,
         name: options.name || 'CLI Generated Token',
