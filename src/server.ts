@@ -1,13 +1,15 @@
-const { ApolloServer } = require('@apollo/server');
-const { startStandaloneServer } = require('@apollo/server/standalone');
-require('dotenv').config();
+import { ApolloServer } from '@apollo/server';
+import { startStandaloneServer } from '@apollo/server/standalone';
+import dotenv from 'dotenv';
 
-const db = require('./database/connection');
-const typeDefs = require('./graphql/schema');
-const resolvers = require('./graphql/resolvers');
-const authMiddleware = require('./middleware/auth');
+dotenv.config();
 
-async function startServer() {
+import db from './database/connection';
+import typeDefs from './graphql/schema';
+import resolvers from './graphql/resolvers';
+import authMiddleware from './middleware/auth';
+
+async function startServer(): Promise<void> {
   // Connect to database
   await db.connect();
 
@@ -18,7 +20,7 @@ async function startServer() {
   });
 
   const { url } = await startStandaloneServer(server, {
-    listen: { port: process.env.PORT || 4000 },
+    listen: { port: parseInt(process.env.PORT || '4000') },
     context: async ({ req }) => {
       return await authMiddleware(req);
     },

@@ -1,8 +1,15 @@
-const { TokenModel } = require('../database/models');
+import { TokenModel } from '../database/models';
+import { AuthContext } from '../types';
 
 const tokenModel = new TokenModel();
 
-async function authMiddleware(req) {
+interface AuthRequest {
+  headers: {
+    authorization?: string;
+  };
+}
+
+async function authMiddleware(req: AuthRequest): Promise<AuthContext> {
   const authHeader = req.headers.authorization;
   
   if (!authHeader) {
@@ -35,4 +42,4 @@ async function authMiddleware(req) {
   }
 }
 
-module.exports = authMiddleware;
+export default authMiddleware;

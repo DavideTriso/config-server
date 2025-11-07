@@ -1,12 +1,15 @@
-const { MongoClient } = require('mongodb');
+import { MongoClient, Db } from 'mongodb';
 
 class DatabaseConnection {
+  client: MongoClient | null;
+  db: Db | null;
+
   constructor() {
     this.client = null;
     this.db = null;
   }
 
-  async connect(uri = process.env.MONGODB_URI) {
+  async connect(uri: string = process.env.MONGODB_URI || ''): Promise<Db> {
     try {
       this.client = new MongoClient(uri);
       await this.client.connect();
@@ -19,14 +22,14 @@ class DatabaseConnection {
     }
   }
 
-  async disconnect() {
+  async disconnect(): Promise<void> {
     if (this.client) {
       await this.client.close();
       console.log('Disconnected from MongoDB');
     }
   }
 
-  getDb() {
+  getDb(): Db {
     if (!this.db) {
       throw new Error('Database not connected. Call connect() first.');
     }
@@ -34,4 +37,4 @@ class DatabaseConnection {
   }
 }
 
-module.exports = new DatabaseConnection();
+export default new DatabaseConnection();
