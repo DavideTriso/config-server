@@ -1,5 +1,5 @@
-const { ConfigModel, TokenModel } = require('../src/database/models');
-const db = require('../src/database/connection');
+import { ConfigModel, TokenModel } from '../src/database/models';
+import db from '../src/database/connection';
 
 describe('Database Models', () => {
   beforeAll(async () => {

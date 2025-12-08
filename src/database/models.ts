@@ -1,20 +1,23 @@
-const { ObjectId } = require('mongodb');
-const db = require('./connection');
+import { ObjectId, Collection } from 'mongodb';
+import db from './connection';
+import { Configuration, ConfigurationUpsertResult, Token, TokenCreateInput } from '../types';
 
-class ConfigModel {
+export class ConfigModel {
+  private collectionName: string;
+
   constructor() {
     this.collectionName = 'configurations';
   }
 
-  getCollection() {
+  private getCollection(): Collection<Configuration> {
     return db.getDb().collection(this.collectionName);
   }
 
-  async findByKeyAndUserId(key, userId) {
+  async findByKeyAndUserId(key: string, userId: string): Promise<Configuration | null> {
     return await this.getCollection().findOne({ key, userId });
   }
 
-  async upsert(key, userId, value) {
+  async upsert(key: string, userId: string, value: unknown): Promise<ConfigurationUpsertResult> {
     const result = await this.getCollection().updateOne(
       { key, userId },
       { 
@@ -40,22 +43,24 @@ class ConfigModel {
     };
   }
 
-  async findByUserId(userId) {
+  async findByUserId(userId: string): Promise<Configuration[]> {
     return await this.getCollection().find({ userId }).toArray();
   }
 }
 
-class TokenModel {
+export class TokenModel {
+  private collectionName: string;
+
   constructor() {
     this.collectionName = 'tokens';
   }
 
-  getCollection() {
+  private getCollection(): Collection<Token> {
     return db.getDb().collection(this.collectionName);
   }
 
-  async create(tokenData) {
-    const token = {
+  async create(tokenData: TokenCreateInput): Promise<Token> {
+    const token: Token = {
       ...tokenData,
       _id: new ObjectId(),
       createdAt: new Date(),
@@ -66,19 +71,19 @@ class TokenModel {
     return token;
   }
 
-  async findByToken(token) {
+  async findByToken(token: string): Promise<Token | null> {
     return await this.getCollection().findOne({ token });
   }
 
-  async findByUserId(userId) {
+  async findByUserId(userId: string): Promise<Token[]> {
     return await this.getCollection().find({ userId }).toArray();
   }
 
-  async findAll() {
+  async findAll(): Promise<Token[]> {
     return await this.getCollection().find({}).toArray();
   }
 
-  async updateById(id, updateData) {
+  async updateById(id: string, updateData: Partial<Token>): Promise<boolean> {
     const result = await this.getCollection().updateOne(
       { _id: new ObjectId(id) },
       { 
@@ -91,18 +96,13 @@ class TokenModel {
     return result.modifiedCount > 0;
   }
 
-  async deleteById(id) {
+  async deleteById(id: string): Promise<boolean> {
     const result = await this.getCollection().deleteOne({ _id: new ObjectId(id) });
     return result.deletedCount > 0;
   }
 
-  async deleteByToken(token) {
+  async deleteByToken(token: string): Promise<boolean> {
     const result = await this.getCollection().deleteOne({ token });
     return result.deletedCount > 0;
   }
 }
-
-module.exports = {
-  ConfigModel,
-  TokenModel
-};

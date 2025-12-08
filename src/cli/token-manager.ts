@@ -1,19 +1,22 @@
 #!/usr/bin/env node
 
-const { program } = require('commander');
-const crypto = require('crypto');
-require('dotenv').config();
+import { program } from 'commander';
+import crypto from 'crypto';
+import dotenv from 'dotenv';
 
-const db = require('../database/connection');
-const { TokenModel } = require('../database/models');
+dotenv.config();
+
+import db from '../database/connection';
+import { TokenModel } from '../database/models';
+import { TokenCreateInput } from '../types';
 
 const tokenModel = new TokenModel();
 
-function generateToken() {
+function generateToken(): string {
   return crypto.randomBytes(32).toString('hex');
 }
 
-async function ensureConnection() {
+async function ensureConnection(): Promise<void> {
   if (!db.db) {
     await db.connect();
   }
@@ -21,18 +24,24 @@ async function ensureConnection() {
 
 program.name('token-manager').description('CLI for managing authentication tokens');
 
+interface CreateOptions {
+  userId: string;
+  name?: string;
+  expires?: string;
+}
+
 program
   .command('create')
   .description('Create a new token')
   .requiredOption('-u, --user-id <userId>', 'User ID for the token')
   .option('-n, --name <name>', 'Token name/description')
   .option('-e, --expires <days>', 'Token expires in X days')
-  .action(async (options) => {
+  .action(async (options: CreateOptions) => {
     try {
       await ensureConnection();
       
       const token = generateToken();
-      const tokenData = {
+      const tokenData: TokenCreateInput = {
         token,
         userId: options.userId,
         name: options.name || 'CLI Generated Token',
@@ -57,18 +66,22 @@ program
       }
       
     } catch (error) {
-      console.error('Error creating token:', error.message);
+      console.error('Error creating token:', (error as Error).message);
       process.exit(1);
     } finally {
       await db.disconnect();
     }
   });
 
+interface ListOptions {
+  userId?: string;
+}
+
 program
   .command('list')
   .description('List all tokens')
   .option('-u, --user-id <userId>', 'Filter by user ID')
-  .action(async (options) => {
+  .action(async (options: ListOptions) => {
     try {
       await ensureConnection();
       
@@ -98,18 +111,22 @@ program
       });
       
     } catch (error) {
-      console.error('Error listing tokens:', error.message);
+      console.error('Error listing tokens:', (error as Error).message);
       process.exit(1);
     } finally {
       await db.disconnect();
     }
   });
 
+interface RevokeOptions {
+  token: string;
+}
+
 program
   .command('revoke')
   .description('Revoke a token')
   .requiredOption('-t, --token <token>', 'Token to revoke')
-  .action(async (options) => {
+  .action(async (options: RevokeOptions) => {
     try {
       await ensureConnection();
       
@@ -122,18 +139,22 @@ program
       }
       
     } catch (error) {
-      console.error('Error revoking token:', error.message);
+      console.error('Error revoking token:', (error as Error).message);
       process.exit(1);
     } finally {
       await db.disconnect();
     }
   });
 
+interface DeactivateOptions {
+  id: string;
+}
+
 program
   .command('deactivate')
   .description('Deactivate a token (without deleting)')
   .requiredOption('-i, --id <id>', 'Token ID to deactivate')
-  .action(async (options) => {
+  .action(async (options: DeactivateOptions) => {
     try {
       await ensureConnection();
       
@@ -146,7 +167,7 @@ program
       }
       
     } catch (error) {
-      console.error('Error deactivating token:', error.message);
+      console.error('Error deactivating token:', (error as Error).message);
       process.exit(1);
     } finally {
       await db.disconnect();
