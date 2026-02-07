@@ -6,8 +6,8 @@ export interface ConfigurationDocument extends Omit<Configuration, '_id'>, Docum
 
 const configurationSchema = new Schema<ConfigurationDocument>(
   {
-    key: { type: String, required: true, index: true },
-    userId: { type: String, index: true, sparse: true },
+    key: { type: String, required: true },
+    userId: { type: String, sparse: true },
     value: { type: Schema.Types.Mixed, required: true },
   },
   {
@@ -19,6 +19,7 @@ const configurationSchema = new Schema<ConfigurationDocument>(
 // Compound index for efficient querying
 configurationSchema.index({ key: 1, userId: 1 }, { unique: true, sparse: true });
 configurationSchema.index({ userId: 1 });
+configurationSchema.index({ key: 1 });
 
 export const ConfigurationModel = mongoose.model<ConfigurationDocument>('Configuration', configurationSchema);
 
@@ -27,8 +28,8 @@ export interface TokenDocument extends Omit<Token, '_id'>, Document {}
 
 const tokenSchema = new Schema<TokenDocument>(
   {
-    token: { type: String, required: true, unique: true, index: true },
-    userId: { type: String, required: true, index: true },
+    token: { type: String, required: true, unique: true },
+    userId: { type: String, required: true },
     name: { type: String, required: true },
     active: { type: Boolean, required: true, default: true },
     expiresAt: { type: Date }
@@ -39,7 +40,6 @@ const tokenSchema = new Schema<TokenDocument>(
   }
 );
 
-tokenSchema.index({ token: 1 });
 tokenSchema.index({ userId: 1 });
 
 export const TokenModel = mongoose.model<TokenDocument>('Token', tokenSchema);

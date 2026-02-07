@@ -8,4 +8,5 @@ module.exports = {
     'src/**/*.ts',
     '!src/**/*.d.ts',
   ],
+  testTimeout: 60000, // 60 seconds for MongoDB Memory Server
 };
