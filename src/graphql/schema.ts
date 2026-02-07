@@ -5,19 +5,18 @@ const typeDefs = gql`
 
   type Configuration {
     key: String!
-    userId: String!
+    userId: String
     value: JSON!
     createdAt: String
     updatedAt: String
   }
 
   type Query {
-    getConfiguration(key: String!): Configuration
-    getUserConfigurations: [Configuration!]!
+    configurations(userId: ID!, keys: [String!]): [Configuration!]!
   }
 
   type Mutation {
-    upsertConfiguration(key: String!, value: JSON!): Configuration!
+    upsertConfiguration(key: String!, value: JSON!, userId: ID): Configuration!
   }
 `;
 

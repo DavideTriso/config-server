@@ -17,16 +17,22 @@ export class ConfigModel {
     return await this.getCollection().findOne({ key, userId });
   }
 
-  async upsert(key: string, userId: string, value: unknown): Promise<ConfigurationUpsertResult> {
+  async upsert(key: string, userId: string | null, value: unknown): Promise<ConfigurationUpsertResult> {
+    const filter = userId ? { key, userId } : { key, userId: { $exists: false } };
+    const setData: any = { 
+      key, 
+      value, 
+      updatedAt: new Date() 
+    };
+    
+    if (userId) {
+      setData.userId = userId;
+    }
+    
     const result = await this.getCollection().updateOne(
-      { key, userId },
+      filter,
       { 
-        $set: { 
-          key, 
-          userId, 
-          value, 
-          updatedAt: new Date() 
-        },
+        $set: setData,
         $setOnInsert: { 
           createdAt: new Date() 
         }
@@ -36,7 +42,7 @@ export class ConfigModel {
     
     return {
       key,
-      userId,
+      userId: userId || undefined,
       value,
       updatedAt: new Date(),
       upserted: result.upsertedCount > 0
@@ -45,6 +51,37 @@ export class ConfigModel {
 
   async findByUserId(userId: string): Promise<Configuration[]> {
     return await this.getCollection().find({ userId }).toArray();
+  }
+
+  async findByUserIdAndKeys(userId: string, keys?: string[]): Promise<Configuration[]> {
+    if (!keys || keys.length === 0) {
+      // Return all configurations for the user (limited to 1000)
+      return await this.getCollection().find({ userId }).limit(1000).toArray();
+    }
+    
+    // Find user-specific configurations for the given keys
+    const userConfigs = await this.getCollection().find({ 
+      userId, 
+      key: { $in: keys } 
+    }).toArray();
+    
+    // Create a map of found keys
+    const foundKeys = new Set(userConfigs.map(c => c.key));
+    
+    // Find missing keys
+    const missingKeys = keys.filter(k => !foundKeys.has(k));
+    
+    // Find default configurations for missing keys
+    let defaultConfigs: Configuration[] = [];
+    if (missingKeys.length > 0) {
+      defaultConfigs = await this.getCollection().find({ 
+        userId: { $exists: false },
+        key: { $in: missingKeys } 
+      }).toArray();
+    }
+    
+    // Combine and return
+    return [...userConfigs, ...defaultConfigs];
   }
 }
 

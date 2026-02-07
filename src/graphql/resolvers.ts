@@ -4,43 +4,38 @@ import { ResolverContext } from '../types';
 
 const configModel = new ConfigModel();
 
-interface GetConfigurationArgs {
-  key: string;
+interface ConfigurationsArgs {
+  userId: string;
+  keys?: string[];
 }
 
 interface UpsertConfigurationArgs {
   key: string;
   value: unknown;
+  userId?: string;
 }
 
 const resolvers = {
   JSON: GraphQLJSON,
 
   Query: {
-    async getConfiguration(_: any, { key }: GetConfigurationArgs, { userId }: ResolverContext) {
-      if (!userId) {
+    async configurations(_: any, { userId, keys }: ConfigurationsArgs, { userId: contextUserId }: ResolverContext) {
+      if (!contextUserId) {
         throw new Error('Authentication required');
       }
       
-      return await configModel.findByKeyAndUserId(key, userId);
-    },
-
-    async getUserConfigurations(_: any, __: any, { userId }: ResolverContext) {
-      if (!userId) {
-        throw new Error('Authentication required');
-      }
-      
-      return await configModel.findByUserId(userId);
+      return await configModel.findByUserIdAndKeys(userId, keys);
     }
   },
 
   Mutation: {
-    async upsertConfiguration(_: any, { key, value }: UpsertConfigurationArgs, { userId }: ResolverContext) {
-      if (!userId) {
+    async upsertConfiguration(_: any, { key, value, userId }: UpsertConfigurationArgs, { userId: contextUserId }: ResolverContext) {
+      if (!contextUserId) {
         throw new Error('Authentication required');
       }
       
-      return await configModel.upsert(key, userId, value);
+      // If userId is not provided, create a default configuration (no userId)
+      return await configModel.upsert(key, userId || null, value);
     }
   }
 };

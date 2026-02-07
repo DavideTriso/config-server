@@ -83,10 +83,10 @@ Authorization: Bearer your-token-here
 
 ### Queries
 
-#### Get a specific configuration
+#### Get configurations for a user
 ```graphql
-query GetConfiguration($key: String!) {
-  getConfiguration(key: $key) {
+query GetConfigurations($userId: ID!, $keys: [String!]) {
+  configurations(userId: $userId, keys: $keys) {
     key
     userId
     value
@@ -96,10 +96,10 @@ query GetConfiguration($key: String!) {
 }
 ```
 
-#### Get all user configurations
+#### Get specific configurations by keys
 ```graphql
-query GetUserConfigurations {
-  getUserConfigurations {
+query GetSpecificConfigurations($userId: ID!) {
+  configurations(userId: $userId, keys: ["theme", "language"]) {
     key
     userId
     value
@@ -111,9 +111,21 @@ query GetUserConfigurations {
 
 ### Mutations
 
-#### Upsert a configuration
+#### Upsert a user configuration
 ```graphql
-mutation UpsertConfiguration($key: String!, $value: JSON!) {
+mutation UpsertConfiguration($key: String!, $value: JSON!, $userId: ID!) {
+  upsertConfiguration(key: $key, value: $value, userId: $userId) {
+    key
+    userId
+    value
+    updatedAt
+  }
+}
+```
+
+#### Upsert a default/fallback configuration
+```graphql
+mutation UpsertDefaultConfiguration($key: String!, $value: JSON!) {
   upsertConfiguration(key: $key, value: $value) {
     key
     userId
@@ -127,9 +139,10 @@ mutation UpsertConfiguration($key: String!, $value: JSON!) {
 
 ### Theme Configuration
 ```graphql
-mutation SetTheme {
+mutation SetTheme($userId: ID!) {
   upsertConfiguration(
     key: "theme"
+    userId: $userId
     value: {
       mode: "dark"
       primaryColor: "#007acc"
@@ -143,11 +156,30 @@ mutation SetTheme {
 }
 ```
 
+### Default Theme Configuration (Fallback)
+```graphql
+mutation SetDefaultTheme {
+  upsertConfiguration(
+    key: "theme"
+    value: {
+      mode: "light"
+      primaryColor: "#ffffff"
+      fontSize: "medium"
+    }
+  ) {
+    key
+    value
+    updatedAt
+  }
+}
+```
+
 ### Language Preference
 ```graphql
-mutation SetLanguage {
+mutation SetLanguage($userId: ID!) {
   upsertConfiguration(
     key: "language"
+    userId: $userId
     value: {
       locale: "en-US"
       timezone: "America/New_York"
