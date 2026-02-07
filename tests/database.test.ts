@@ -1,5 +1,6 @@
 import { ConfigModel, TokenModel } from '../src/database/models';
 import db from '../src/database/connection';
+import { ConfigurationModel, TokenModel as TokenSchema } from '../src/database/schemas';
 
 describe('Database Models', () => {
   beforeAll(async () => {
@@ -9,9 +10,8 @@ describe('Database Models', () => {
 
   afterAll(async () => {
     // Clean up and disconnect
-    const testDb = db.getDb();
-    await testDb.collection('configurations').deleteMany({});
-    await testDb.collection('tokens').deleteMany({});
+    await ConfigurationModel.deleteMany({});
+    await TokenSchema.deleteMany({});
     await db.disconnect();
   });
 

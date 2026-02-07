@@ -5,7 +5,7 @@ A GraphQL-based configuration server for storing user UI settings and preference
 ## Features
 
 - **GraphQL API** with Apollo Server
-- **MongoDB persistence** (no ORMs/ODMs)
+- **MongoDB persistence** with Mongoose ODM and connection pooling
 - **Token-based authentication**
 - **CLI for token management**
 - **Configuration management** by key and user ID
@@ -16,6 +16,7 @@ A GraphQL-based configuration server for storing user UI settings and preference
 - **Node.js** - Runtime environment
 - **Apollo Server** - GraphQL server
 - **MongoDB** - Document database
+- **Mongoose** - MongoDB ODM with connection pooling
 - **Express** - Web framework
 - **Commander.js** - CLI framework
 
