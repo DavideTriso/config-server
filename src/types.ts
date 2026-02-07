@@ -4,7 +4,7 @@ import { ObjectId } from 'mongodb';
 export interface Configuration {
   _id?: ObjectId;
   key: string;
-  userId: string;
+  userId?: string;
   value: unknown; // JSON value - can be any valid JSON type
   createdAt?: Date;
   updatedAt?: Date;
@@ -12,7 +12,7 @@ export interface Configuration {
 
 export interface ConfigurationUpsertResult {
   key: string;
-  userId: string;
+  userId?: string;
   value: unknown;
   updatedAt: Date;
   upserted: boolean;

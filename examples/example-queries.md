@@ -14,10 +14,21 @@ Authorization: Bearer your-token-here
 
 ## Example Queries
 
-### Get Theme Configuration
+### Get All Configurations for a User
 ```graphql
-query GetTheme {
-  getConfiguration(key: "theme") {
+query GetAllConfigs($userId: ID!) {
+  configurations(userId: $userId) {
+    key
+    value
+    updatedAt
+  }
+}
+```
+
+### Get Specific Configurations by Keys
+```graphql
+query GetThemeAndLanguage($userId: ID!) {
+  configurations(userId: $userId, keys: ["theme", "language"]) {
     key
     userId
     value
@@ -26,10 +37,21 @@ query GetTheme {
 }
 ```
 
-### Get All User Configurations
+## Example Mutations
+
+### Set User Theme (Dark Mode)
 ```graphql
-query GetAllConfigs {
-  getUserConfigurations {
+mutation SetDarkTheme($userId: ID!) {
+  upsertConfiguration(
+    key: "theme"
+    userId: $userId
+    value: {
+      mode: "dark"
+      primaryColor: "#007acc"
+      fontSize: "medium"
+      sidebarCollapsed: false
+    }
+  ) {
     key
     value
     updatedAt
@@ -37,18 +59,15 @@ query GetAllConfigs {
 }
 ```
 
-## Example Mutations
-
-### Set Theme (Dark Mode)
+### Set Default Theme (Fallback)
 ```graphql
-mutation SetDarkTheme {
+mutation SetDefaultTheme {
   upsertConfiguration(
     key: "theme"
     value: {
-      mode: "dark"
-      primaryColor: "#007acc"
+      mode: "light"
+      primaryColor: "#ffffff"
       fontSize: "medium"
-      sidebarCollapsed: false
     }
   ) {
     key

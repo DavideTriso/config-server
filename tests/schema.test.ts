@@ -10,20 +10,19 @@ describe('GraphQL Schema', () => {
     const schemaString = typeDefs.loc?.source.body || '';
     expect(schemaString).toMatch(/type Configuration/);
     expect(schemaString).toMatch(/key: String!/);
-    expect(schemaString).toMatch(/userId: String!/);
+    expect(schemaString).toMatch(/userId: String/);
     expect(schemaString).toMatch(/value: JSON!/);
   });
 
-  test('schema should contain Query type with getConfiguration', () => {
+  test('schema should contain Query type with configurations', () => {
     const schemaString = typeDefs.loc?.source.body || '';
     expect(schemaString).toMatch(/type Query/);
-    expect(schemaString).toMatch(/getConfiguration\(key: String!\): Configuration/);
-    expect(schemaString).toMatch(/getUserConfigurations: \[Configuration!\]!/);
+    expect(schemaString).toMatch(/configurations\(userId: ID!, keys: \[String!\]\): \[Configuration!\]!/);
   });
 
   test('schema should contain Mutation type with upsertConfiguration', () => {
     const schemaString = typeDefs.loc?.source.body || '';
     expect(schemaString).toMatch(/type Mutation/);
-    expect(schemaString).toMatch(/upsertConfiguration\(key: String!, value: JSON!\): Configuration!/);
+    expect(schemaString).toMatch(/upsertConfiguration\(key: String!, value: JSON!, userId: ID\): Configuration!/);
   });
 });
