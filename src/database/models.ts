@@ -64,12 +64,13 @@ export class ConfigModel {
     const missingKeys = keys.filter(k => !foundKeys.has(k));
     
     // Find default configurations for missing keys
-    let defaultConfigs: any[] = [];
+    let defaultConfigs: Configuration[] = [];
     if (missingKeys.length > 0) {
-      defaultConfigs = await ConfigurationModel.find({ 
+      const results = await ConfigurationModel.find({ 
         userId: { $exists: false },
         key: { $in: missingKeys } 
       }).lean();
+      defaultConfigs = results as Configuration[];
     }
     
     // Combine and return

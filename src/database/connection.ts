@@ -57,9 +57,12 @@ class DatabaseConnection {
     return mongoose;
   }
 
-  // Backward compatibility property
+  // Backward compatibility property - throws error if not connected
   get db() {
-    return this.isConnected ? mongoose.connection.db : null;
+    if (!this.isConnected) {
+      throw new Error('Database not connected. Call connect() first.');
+    }
+    return mongoose.connection.db;
   }
 }
 
