@@ -1,8 +1,8 @@
-import { ObjectId } from 'mongodb';
+import { Types } from 'mongoose';
 
 // Configuration Types
 export interface Configuration {
-  _id?: ObjectId;
+  _id?: Types.ObjectId;
   key: string;
   userId?: string;
   value: unknown; // JSON value - can be any valid JSON type
@@ -20,7 +20,7 @@ export interface ConfigurationUpsertResult {
 
 // Token Types
 export interface Token {
-  _id: ObjectId;
+  _id: Types.ObjectId;
   token: string;
   userId: string;
   name: string;
