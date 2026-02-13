@@ -39,6 +39,67 @@ A GraphQL-based configuration server for storing user UI settings and preference
 
 The server will be available at `http://localhost:4000/graphql`
 
+## Docker Development Environment
+
+You can run the application in a containerized development environment using Docker Compose.
+
+### Prerequisites
+
+- Docker Engine installed on your system
+- Docker Compose v2.0 or higher
+
+### Starting the Services
+
+To start both the application and MongoDB in development mode:
+
+```bash
+docker compose -f docker-compose.dev.yaml up
+```
+
+Or to run in detached mode (background):
+
+```bash
+docker compose -f docker-compose.dev.yaml up -d
+```
+
+The services will be available at:
+- **GraphQL Server**: `http://localhost:4000/graphql`
+- **MongoDB**: `mongodb://localhost:27017/config-server`
+
+### Stopping the Services
+
+To stop the services:
+
+```bash
+docker compose -f docker-compose.dev.yaml down
+```
+
+To stop and remove volumes (this will delete all data):
+
+```bash
+docker compose -f docker-compose.dev.yaml down -v
+```
+
+### Viewing Logs
+
+To view logs for all services:
+
+```bash
+docker compose -f docker-compose.dev.yaml logs -f
+```
+
+To view logs for a specific service:
+
+```bash
+docker compose -f docker-compose.dev.yaml logs -f app
+```
+
+### Development Features
+
+- **Hot Reload**: Changes to source files are automatically detected and the server restarts
+- **Persistent Data**: MongoDB data is persisted in Docker volumes
+- **Isolated Environment**: All dependencies are contained within Docker containers
+
 ## Token Management
 
 Use the CLI tool to manage authentication tokens:

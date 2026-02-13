@@ -1,0 +1,46 @@
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:latest
+    container_name: config-server-mongodb-dev
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    environment:
+      - MONGO_INITDB_DATABASE=config-server
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Config Server Application
+  app:
+    image: node:20-alpine
+    container_name: config-server-app-dev
+    working_dir: /app
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=4000
+      - MONGODB_URI=mongodb://mongodb:27017/config-server
+    command: sh -c "npm install && npm run dev"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    stdin_open: true
+    tty: true
+
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
