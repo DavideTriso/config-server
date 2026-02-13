@@ -62,6 +62,8 @@ Or to run in detached mode (background):
 docker compose -f docker-compose.dev.yaml up -d
 ```
 
+**Note**: The first startup will take a few minutes as it installs dependencies. Subsequent starts will be much faster as dependencies are cached in a Docker volume.
+
 The services will be available at:
 - **GraphQL Server**: `http://localhost:4000/graphql`
 - **MongoDB**: `mongodb://localhost:27017/config-server`
