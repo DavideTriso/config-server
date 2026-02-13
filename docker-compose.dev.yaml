@@ -19,7 +19,7 @@ services:
 
   # Config Server Application
   app:
-    image: node:20-alpine
+    image: node:20
     container_name: config-server-app-dev
     working_dir: /app
     restart: unless-stopped
