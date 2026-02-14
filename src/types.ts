@@ -1,49 +1,14 @@
-import { Types } from 'mongoose';
+export { ConfigurationInterface } from './types/ConfigurationInterface';
+export { ConfigurationUpsertResultInterface } from './types/ConfigurationUpsertResultInterface';
+export { TokenInterface } from './types/TokenInterface';
+export { TokenCreateInputInterface } from './types/TokenCreateInputInterface';
+export { AuthContextInterface } from './types/AuthContextInterface';
+export { ResolverContextInterface } from './types/ResolverContextInterface';
 
-// Configuration Types
-export interface Configuration {
-  _id?: Types.ObjectId;
-  key: string;
-  userId?: string;
-  value: unknown; // JSON value - can be any valid JSON type
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
-export interface ConfigurationUpsertResult {
-  key: string;
-  userId?: string;
-  value: unknown;
-  updatedAt: Date;
-  upserted: boolean;
-}
-
-// Token Types
-export interface Token {
-  _id: Types.ObjectId;
-  token: string;
-  userId: string;
-  name: string;
-  active: boolean;
-  expiresAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface TokenCreateInput {
-  token: string;
-  userId: string;
-  name: string;
-  active: boolean;
-  expiresAt?: Date;
-}
-
-// Authentication Context
-export interface AuthContext {
-  userId: string | null;
-}
-
-// GraphQL Resolver Context
-export interface ResolverContext {
-  userId: string | null;
-}
+// Legacy type aliases for backward compatibility during migration
+export type Configuration = ConfigurationInterface;
+export type ConfigurationUpsertResult = ConfigurationUpsertResultInterface;
+export type Token = TokenInterface;
+export type TokenCreateInput = TokenCreateInputInterface;
+export type AuthContext = AuthContextInterface;
+export type ResolverContext = ResolverContextInterface;

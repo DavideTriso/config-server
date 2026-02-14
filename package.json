@@ -1,50 +1,56 @@
 {
-  "name": "config-server",
-  "version": "1.0.0",
-  "description": "Simple GraphQL server to store and retrieve non-sensitive configurations and settings",
-  "main": "dist/index.js",
-  "scripts": {
-    "build": "tsc",
-    "start": "npm run build && node dist/index.js",
-    "dev": "ts-node index.ts",
-    "token": "ts-node src/cli/token-manager.ts",
-    "test": "jest",
-    "clean": "rm -rf dist",
-    "prepublishOnly": "npm run build"
-  },
-  "bin": {
-    "config-server-token": "./dist/src/cli/token-manager.js"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "engines": {
-    "node": ">=20.19.0"
-  },
-  "dependencies": {
-    "@apollo/server": "^5.0.0",
-    "@graphql-tools/schema": "^10.0.25",
-    "apollo-server-core": "^3.13.0",
-    "body-parser": "^2.2.0",
-    "commander": "^14.0.1",
-    "cors": "^2.8.5",
-    "dotenv": "^17.2.3",
-    "express": "^4.21.2",
-    "graphql": "^16.11.0",
-    "graphql-type-json": "^0.3.2",
-    "mongoose": "^9.1.6"
-  },
-  "devDependencies": {
-    "@types/body-parser": "^1.19.6",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.5",
-    "@types/jest": "^30.0.0",
-    "@types/mongoose": "^5.11.96",
-    "@types/node": "^24.10.0",
-    "jest": "^30.2.0",
-    "supertest": "^7.1.4",
-    "ts-jest": "^29.4.5",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
-  }
+    "name": "config-server",
+    "version": "1.0.0",
+    "description": "Simple GraphQL server to store and retrieve non-sensitive configurations and settings",
+    "main": "dist/index.js",
+    "scripts": {
+        "build": "tsc",
+        "start": "npm run build && node dist/index.js",
+        "dev": "ts-node index.ts",
+        "token": "ts-node src/cli/token-manager.ts",
+        "seed": "ts-node src/database/seed.ts",
+        "bootstrap-dev": "ts-node src/cli/bootstrap-dev.ts",
+        "test": "jest",
+        "clean": "rm -rf dist",
+        "prepublishOnly": "npm run build"
+    },
+    "bin": {
+        "config-server-token": "./dist/src/cli/token-manager.js"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "engines": {
+        "node": ">=20.19.0"
+    },
+    "dependencies": {
+        "@apollo/server": "^5.0.0",
+        "@graphql-tools/schema": "^10.0.25",
+        "apollo-server-core": "^3.13.0",
+        "body-parser": "^2.2.0",
+        "commander": "^14.0.1",
+        "cors": "^2.8.5",
+        "dotenv": "^17.2.3",
+        "express": "^4.21.2",
+        "graphql": "^16.11.0",
+        "graphql-type-json": "^0.3.2",
+        "mongoose": "^9.1.6",
+        "zod": "^3.22.4"
+    },
+    "devDependencies": {
+        "@faker-js/faker": "^10.3.0",
+        "@types/body-parser": "^1.19.6",
+        "@types/cors": "^2.8.19",
+        "@types/express": "^5.0.5",
+        "@types/jest": "^30.0.0",
+        "@types/mongoose": "^5.11.96",
+        "@types/node": "^24.10.0",
+        "@types/supertest": "^6.0.2",
+        "jest": "^30.2.0",
+        "mongodb-memory-server": "^9.1.6",
+        "supertest": "^7.1.4",
+        "ts-jest": "^29.4.5",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.9.3"
+    }
 }

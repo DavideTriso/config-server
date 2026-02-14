@@ -1,45 +1,56 @@
-import mongoose, { Schema, Document } from 'mongoose';
-import { Configuration, Token } from '../types';
+import mongoose, { Schema } from 'mongoose';
+import { ConfigurationDocumentInterface } from './types/ConfigurationDocumentInterface';
+import { TokenDocumentInterface } from './types/TokenDocumentInterface';
 
-// Configuration Schema
-export interface ConfigurationDocument extends Omit<Configuration, '_id'>, Document {}
+// Re-export for convenience
+export type ConfigurationDocument = ConfigurationDocumentInterface;
+export type TokenDocument = TokenDocumentInterface;
 
-const configurationSchema = new Schema<ConfigurationDocument>(
-  {
-    key: { type: String, required: true },
-    userId: { type: String, sparse: true },
-    value: { type: Schema.Types.Mixed, required: true },
-  },
-  {
-    timestamps: true,
-    collection: 'configurations'
-  }
+const configurationSchema = new Schema<ConfigurationDocumentInterface>(
+    {
+        key: { type: String, required: true },
+        userId: { type: String, sparse: true },
+        value: { type: Schema.Types.Mixed, required: true },
+    },
+    {
+        timestamps: true,
+        collection: 'configurations'
+    }
 );
 
 // Compound index for efficient querying
-configurationSchema.index({ key: 1, userId: 1 }, { unique: true, sparse: true });
-configurationSchema.index({ userId: 1 });
-configurationSchema.index({ key: 1 });
-
-export const ConfigurationModel = mongoose.model<ConfigurationDocument>('Configuration', configurationSchema);
-
-// Token Schema
-export interface TokenDocument extends Omit<Token, '_id'>, Document {}
-
-const tokenSchema = new Schema<TokenDocument>(
-  {
-    token: { type: String, required: true, unique: true },
-    userId: { type: String, required: true },
-    name: { type: String, required: true },
-    active: { type: Boolean, required: true, default: true },
-    expiresAt: { type: Date }
-  },
-  {
-    timestamps: true,
-    collection: 'tokens'
-  }
+configurationSchema.index(
+    { key: 1, userId: 1 },
+    { name: 'idx_key_userId', unique: true, sparse: true }
+);
+configurationSchema.index(
+    { userId: 1 },
+    { name: 'idx_userId' }
+);
+configurationSchema.index(
+    { key: 1 },
+    { name: 'idx_key' }
 );
 
-tokenSchema.index({ userId: 1 });
+export const ConfigurationModel = mongoose.model<ConfigurationDocumentInterface>('Configuration', configurationSchema);
 
-export const TokenModel = mongoose.model<TokenDocument>('Token', tokenSchema);
+const tokenSchema = new Schema<TokenDocumentInterface>(
+    {
+        token: { type: String, required: true },
+        name: { type: String, required: true },
+        active: { type: Boolean, required: true, default: true },
+        expiresAt: { type: Date }
+    },
+    {
+        timestamps: true,
+        collection: 'tokens'
+    }
+);
+
+// Token indexes with explicit names
+tokenSchema.index(
+    { token: 1 },
+    { name: 'idx_token', unique: true }
+);
+
+export const TokenModel = mongoose.model<TokenDocumentInterface>('Token', tokenSchema);

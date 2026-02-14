@@ -104,26 +104,21 @@ docker compose -f docker-compose.dev.yaml logs -f app
 
 ## Token Management
 
-Use the CLI tool to manage authentication tokens:
+Use the CLI tool to manage authentication tokens. Tokens are global and used by client applications to authenticate with the GraphQL server.
 
 ### Create a token
 ```bash
-npm run token create --user-id user123 --name "My App Token"
+npm run token create --name "My App Token"
 ```
 
 ### Create a token with expiration (30 days)
 ```bash
-npm run token create --user-id user123 --name "Temp Token" --expires 30
+npm run token create --name "Temp Token" --expires 30
 ```
 
 ### List all tokens
 ```bash
 npm run token list
-```
-
-### List tokens for specific user
-```bash
-npm run token list --user-id user123
 ```
 
 ### Revoke a token
@@ -135,6 +130,70 @@ npm run token revoke --token your-token-here
 ```bash
 npm run token deactivate --id token-id-here
 ```
+
+## Database Seeding
+
+For development and testing purposes, you can populate the database with sample data using the seeding tool.
+
+### Bootstrap development environment (recommended)
+```bash
+npm run bootstrap-dev
+```
+
+This command will:
+1. Drop existing Configurations and Tokens collections
+2. Recreate collections with proper indexes
+3. Automatically seed all collections with test data
+
+This is the easiest way to reset your development database to a clean state with fresh test data.
+
+### Seed all collections with test data
+```bash
+npm run seed
+```
+
+This will create:
+- **Sample configurations** for 3 test users (alice, bob, charlie) with various settings like theme, language, notifications, etc.
+- **Default/fallback configurations** for common settings
+- **1000+ random configuration records** with diverse keys and values for performance testing
+- **Test tokens** for client applications (tokens will be displayed in the console output for easy access)
+
+### Seed specific collections only
+```bash
+# Seed only configurations
+npm run seed -- --collections configurations
+
+# Seed only tokens
+npm run seed -- --collections tokens
+```
+
+### Clear existing data before seeding
+```bash
+npm run seed -- --clear
+```
+
+This will delete all existing data in the collections before inserting the seed data.
+
+### Combine options
+```bash
+# Clear and seed only configurations
+npm run seed -- --clear --collections configurations
+```
+
+### Sample Seed Data
+
+The seeder creates the following test users:
+- **alice** - Uses dark theme, English language, email notifications
+- **bob** - Uses light theme, Spanish language, all notifications enabled
+- **charlie** - Uses auto theme, French language, accessibility settings enabled
+
+Additionally, the seeder generates **1000 random configuration records** using `@faker-js/faker` with:
+- Approximately 200 unique random user IDs
+- Various configuration keys (theme, language, timezone, notifications, dashboard settings, etc.)
+- Diverse data types (strings, numbers, booleans, objects)
+- Realistic test data for performance and load testing
+
+Multiple authentication tokens are created for client applications to use during testing.
 
 ## GraphQL API
 

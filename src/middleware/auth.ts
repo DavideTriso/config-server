@@ -1,45 +1,61 @@
-import { TokenModel } from '../database/models';
-import { AuthContext } from '../types';
+import { TokenModel } from '../database/TokenModel';
+import { AuthContextInterface, TokenInterface } from '../types';
+import { AuthRequestInterface } from './types/AuthRequestInterface';
 
 const tokenModel = new TokenModel();
 
-interface AuthRequest {
-  headers: {
-    authorization?: string;
-  };
+const UNAUTHENTICATED_CONTEXT: AuthContextInterface = { userId: null };
+const AUTHENTICATED_CONTEXT: AuthContextInterface = { userId: 'authenticated' };
+
+function extractTokenFromHeader(authHeader: string | undefined): string | null {
+    if (!authHeader) {
+        return null;
+    }
+    return authHeader.replace('Bearer ', '');
 }
 
-async function authMiddleware(req: AuthRequest): Promise<AuthContext> {
-  const authHeader = req.headers.authorization;
-  
-  if (!authHeader) {
-    return { userId: null };
-  }
+function isTokenExpired(token: TokenInterface): boolean {
+    if (!token.expiresAt) {
+        return false;
+    }
+    return new Date() > new Date(token.expiresAt);
+}
 
-  const token = authHeader.replace('Bearer ', '');
-  
-  try {
-    const tokenDoc = await tokenModel.findByToken(token);
-    
-    if (!tokenDoc) {
-      return { userId: null };
+function isTokenValid(token: TokenInterface | null): boolean {
+    if (!token) {
+        return false;
     }
 
-    // Check if token is active
-    if (!tokenDoc.active) {
-      return { userId: null };
+    if (!token.active) {
+        return false;
     }
 
-    // Check if token has expiry and is expired
-    if (tokenDoc.expiresAt && new Date() > new Date(tokenDoc.expiresAt)) {
-      return { userId: null };
+    if (isTokenExpired(token)) {
+        return false;
     }
 
-    return { userId: tokenDoc.userId };
-  } catch (error) {
-    console.error('Authentication error:', error);
-    return { userId: null };
-  }
+    return true;
+}
+
+async function authMiddleware(req: AuthRequestInterface): Promise<AuthContextInterface> {
+    const tokenString = extractTokenFromHeader(req.headers.authorization);
+
+    if (!tokenString) {
+        return UNAUTHENTICATED_CONTEXT;
+    }
+
+    try {
+        const tokenDoc = await tokenModel.findByToken(tokenString);
+
+        if (!isTokenValid(tokenDoc)) {
+            return UNAUTHENTICATED_CONTEXT;
+        }
+
+        return AUTHENTICATED_CONTEXT;
+    } catch (error) {
+        console.error('Authentication error:', error);
+        return UNAUTHENTICATED_CONTEXT;
+    }
 }
 
 export default authMiddleware;
