@@ -9,6 +9,7 @@ const typeDefs = gql`
     value: JSON!
     createdAt: String
     updatedAt: String
+    upserted: Boolean
   }
 
   type Query {
