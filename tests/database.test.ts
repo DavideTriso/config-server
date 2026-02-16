@@ -1,7 +1,6 @@
-import { ConfigModel } from '../src/database/ConfigModel';
-import { TokenModel } from '../src/database/TokenModel';
-import db from '../src/database/DatabaseConnection';
-import { ConfigurationModel, TokenModel as TokenSchema } from '../src/database/schemas';
+import databaseConnection from '../src/database/DatabaseConnection';
+import { ConfigurationSchema } from '../src/document/ConfigurationModel';
+import { TokenSchema } from '../src/document/TokenModel';
 
 describe('Database Models', () => {
     const TEST_MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/config-server-test';
@@ -10,7 +9,7 @@ describe('Database Models', () => {
     beforeAll(async () => {
         try {
             // Try to connect to test database
-            await db.connect(TEST_MONGODB_URI);
+            await databaseConnection.connect(TEST_MONGODB_URI);
             isConnected = true;
         } catch (error) {
             console.log('MongoDB not available, skipping database tests');
@@ -22,32 +21,31 @@ describe('Database Models', () => {
         if (isConnected) {
             // Clean up and disconnect
             try {
-                await ConfigurationModel.deleteMany({});
+                await ConfigurationSchema.deleteMany({});
                 await TokenSchema.deleteMany({});
             } catch (error) {
                 // Ignore cleanup errors
             }
-            await db.disconnect();
+            await databaseConnection.disconnect();
         }
     });
 
-    describe('ConfigModel', () => {
-        const configModel = new ConfigModel();
-
+    describe('ConfigurationModel', () => {
         test('should upsert configuration with userId', async () => {
             if (!isConnected) {
                 console.log('Skipping test - MongoDB not available');
                 return;
             }
 
-            const result = await configModel.upsert('theme', 'user123', { mode: 'dark', primaryColor: '#007acc' });
+            const upsertedCount = await ConfigurationSchema.upsertConfiguration('theme', 'user123', { mode: 'dark', primaryColor: '#007acc' });
+            const result = await ConfigurationSchema.findByKeyAndUserId('theme', 'user123');
 
+            expect(upsertedCount).toBe(1);
             expect(result).toMatchObject({
                 key: 'theme',
                 userId: 'user123',
                 value: { mode: 'dark', primaryColor: '#007acc' }
             });
-            expect(result.upserted).toBe(true);
         });
 
         test('should upsert default configuration without userId', async () => {
@@ -56,14 +54,16 @@ describe('Database Models', () => {
                 return;
             }
 
-            const result = await configModel.upsert('defaultTheme', null, { mode: 'light', primaryColor: '#ffffff' });
+            const upsertedCount = await ConfigurationSchema.upsertConfiguration('defaultTheme', null, { mode: 'light', primaryColor: '#ffffff' });
+            const result = await ConfigurationSchema.findByKeyAndUserId('defaultTheme', null);
 
+            expect(upsertedCount).toBe(1);
+            expect(result).toBeDefined();
             expect(result).toMatchObject({
                 key: 'defaultTheme',
                 value: { mode: 'light', primaryColor: '#ffffff' }
             });
-            expect(result.userId).toBeUndefined();
-            expect(result.upserted).toBe(true);
+            expect(result?.userId).toBeUndefined();
         });
 
         test('should find configuration by key and userId', async () => {
@@ -72,7 +72,7 @@ describe('Database Models', () => {
                 return;
             }
 
-            const config = await configModel.findByKeyAndUserId('theme', 'user123');
+            const config = await ConfigurationSchema.findByKeyAndUserId('theme', 'user123');
 
             expect(config).toMatchObject({
                 key: 'theme',
@@ -87,14 +87,15 @@ describe('Database Models', () => {
                 return;
             }
 
-            const result = await configModel.upsert('theme', 'user123', { mode: 'light', primaryColor: '#ffffff' });
+            const upsertedCount = await ConfigurationSchema.upsertConfiguration('theme', 'user123', { mode: 'light', primaryColor: '#ffffff' });
+            const result = await ConfigurationSchema.findByKeyAndUserId('theme', 'user123');
 
+            expect(upsertedCount).toBe(0);
             expect(result).toMatchObject({
                 key: 'theme',
                 userId: 'user123',
                 value: { mode: 'light', primaryColor: '#ffffff' }
             });
-            expect(result.upserted).toBe(false);
         });
 
         test('should find configurations by userId and keys with fallback to defaults', async () => {
@@ -104,11 +105,11 @@ describe('Database Models', () => {
             }
 
             // Setup: Create user config and default config
-            await configModel.upsert('userSetting', 'user456', { enabled: true });
-            await configModel.upsert('defaultSetting', null, { enabled: false });
+            await ConfigurationSchema.upsertConfiguration('userSetting', 'user456', { enabled: true });
+            await ConfigurationSchema.upsertConfiguration('defaultSetting', null, { enabled: false });
 
             // Test: Query with keys that include both user and default configs
-            const configs = await configModel.findByUserIdAndKeys('user456', ['userSetting', 'defaultSetting']);
+            const configs = await ConfigurationSchema.findByUserIdAndKeys('user456', ['userSetting', 'defaultSetting']);
 
             expect(configs.length).toBe(2);
 
@@ -134,11 +135,11 @@ describe('Database Models', () => {
             }
 
             // Setup: Create multiple configs for a user
-            await configModel.upsert('setting1', 'user789', { value: 1 });
-            await configModel.upsert('setting2', 'user789', { value: 2 });
+            await ConfigurationSchema.upsertConfiguration('setting1', 'user789', { value: 1 });
+            await ConfigurationSchema.upsertConfiguration('setting2', 'user789', { value: 2 });
 
             // Test: Query without keys
-            const configs = await configModel.findByUserIdAndKeys('user789');
+            const configs = await ConfigurationSchema.findByUserIdAndKeys('user789');
 
             expect(configs.length).toBeGreaterThanOrEqual(2);
             const userConfigs = configs.filter(c => c.userId === 'user789');
@@ -151,15 +152,13 @@ describe('Database Models', () => {
                 return;
             }
 
-            const configs = await configModel.findByUserIdAndKeys('nonexistentUser', ['nonexistentKey']);
+            const configs = await ConfigurationSchema.findByUserIdAndKeys('nonexistentUser', ['nonexistentKey']);
 
             expect(configs).toEqual([]);
         });
     });
 
     describe('TokenModel', () => {
-        const tokenModel = new TokenModel();
-
         test('should create token', async () => {
             if (!isConnected) {
                 console.log('Skipping test - MongoDB not available');
@@ -172,7 +171,7 @@ describe('Database Models', () => {
                 active: true
             };
 
-            const result = await tokenModel.create(tokenData);
+            const result = await TokenSchema.createToken(tokenData);
 
             expect(result).toMatchObject({
                 token: 'test-token-123',
@@ -189,7 +188,7 @@ describe('Database Models', () => {
                 return;
             }
 
-            const token = await tokenModel.findByToken('test-token-123');
+            const token = await TokenSchema.findByToken('test-token-123');
 
             expect(token).toMatchObject({
                 token: 'test-token-123',

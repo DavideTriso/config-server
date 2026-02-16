@@ -1,23 +1,20 @@
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
-import { TokenModel as TokenSchema } from '../src/database/schemas';
-import { TokenModel } from '../src/database/TokenModel';
+import { TokenSchema } from '../src/document/TokenModel';
 import crypto from 'crypto';
 
 describe('Token CLI Management Tests', () => {
-    let mongoServer: MongoMemoryServer;
-    let tokenModel: TokenModel;
+    let mongoMemoryServer: MongoMemoryServer;
 
     beforeAll(async () => {
-        mongoServer = await MongoMemoryServer.create();
-        const mongoUri = mongoServer.getUri();
+        mongoMemoryServer = await MongoMemoryServer.create();
+        const mongoUri = mongoMemoryServer.getUri();
         await mongoose.connect(mongoUri);
-        tokenModel = new TokenModel();
     });
 
     afterAll(async () => {
         await mongoose.disconnect();
-        await mongoServer.stop();
+        await mongoMemoryServer.stop();
     });
 
     afterEach(async () => {
@@ -32,7 +29,7 @@ describe('Token CLI Management Tests', () => {
                 active: true,
             };
 
-            const createdToken = await tokenModel.create(tokenData);
+            const createdToken = await TokenSchema.createToken(tokenData);
 
             expect(createdToken).toBeDefined();
             expect(createdToken._id).toBeDefined();
@@ -58,7 +55,7 @@ describe('Token CLI Management Tests', () => {
                 expiresAt,
             };
 
-            const createdToken = await tokenModel.create(tokenData);
+            const createdToken = await TokenSchema.createToken(tokenData);
 
             expect(createdToken.expiresAt).toBeDefined();
             expect(new Date(createdToken.expiresAt!).getTime()).toBeCloseTo(
@@ -86,10 +83,10 @@ describe('Token CLI Management Tests', () => {
             ];
 
             for (const tokenData of tokens) {
-                await tokenModel.create(tokenData);
+                await TokenSchema.createToken(tokenData);
             }
 
-            const allTokens = await tokenModel.findAll();
+            const allTokens = await TokenSchema.findAllTokens();
             expect(allTokens).toHaveLength(2);
             expect(allTokens.map(t => t.name)).toEqual(
                 expect.arrayContaining(['Token 1', 'Token 2'])
@@ -100,12 +97,12 @@ describe('Token CLI Management Tests', () => {
     describe('List Tokens', () => {
         beforeEach(async () => {
             // Create test tokens
-            await tokenModel.create({
+            await TokenSchema.createToken({
                 token: 'token1',
                 name: 'First Token',
                 active: true,
             });
-            await tokenModel.create({
+            await TokenSchema.createToken({
                 token: 'token2',
                 name: 'Second Token',
                 active: false,
@@ -113,7 +110,7 @@ describe('Token CLI Management Tests', () => {
         });
 
         it('should list all tokens', async () => {
-            const tokens = await tokenModel.findAll();
+            const tokens = await TokenSchema.findAllTokens();
 
             expect(tokens).toHaveLength(2);
             expect(tokens).toEqual(
@@ -127,14 +124,14 @@ describe('Token CLI Management Tests', () => {
         it('should return empty array when no tokens exist', async () => {
             await TokenSchema.deleteMany({});
 
-            const tokens = await tokenModel.findAll();
+            const tokens = await TokenSchema.findAllTokens();
 
             expect(tokens).toHaveLength(0);
             expect(tokens).toEqual([]);
         });
 
         it('should include token metadata in list', async () => {
-            const tokens = await tokenModel.findAll();
+            const tokens = await TokenSchema.findAllTokens();
 
             tokens.forEach(token => {
                 expect(token._id).toBeDefined();
@@ -149,7 +146,7 @@ describe('Token CLI Management Tests', () => {
 
     describe('Find Token by Token String', () => {
         beforeEach(async () => {
-            await tokenModel.create({
+            await TokenSchema.createToken({
                 token: 'findme123',
                 name: 'Findable Token',
                 active: true,
@@ -157,7 +154,7 @@ describe('Token CLI Management Tests', () => {
         });
 
         it('should find token by token string', async () => {
-            const token = await tokenModel.findByToken('findme123');
+            const token = await TokenSchema.findByToken('findme123');
 
             expect(token).toBeDefined();
             expect(token?.name).toBe('Findable Token');
@@ -165,7 +162,7 @@ describe('Token CLI Management Tests', () => {
         });
 
         it('should return null for non-existent token', async () => {
-            const token = await tokenModel.findByToken('nonexistent');
+            const token = await TokenSchema.findByToken('nonexistent');
 
             expect(token).toBeNull();
         });
@@ -175,7 +172,7 @@ describe('Token CLI Management Tests', () => {
         let tokenId: string;
 
         beforeEach(async () => {
-            const token = await tokenModel.create({
+            const token = await TokenSchema.createToken({
                 token: 'deactivate_me',
                 name: 'Token to Deactivate',
                 active: true,
@@ -184,7 +181,7 @@ describe('Token CLI Management Tests', () => {
         });
 
         it('should deactivate token and persist change to database', async () => {
-            const updated = await tokenModel.updateById(tokenId, { active: false });
+            const updated = await TokenSchema.updateTokenById(tokenId, { active: false });
 
             expect(updated).toBe(true);
 
@@ -197,7 +194,7 @@ describe('Token CLI Management Tests', () => {
 
         it('should return false when trying to deactivate non-existent token', async () => {
             const fakeId = new mongoose.Types.ObjectId().toString();
-            const updated = await tokenModel.updateById(fakeId, { active: false });
+            const updated = await TokenSchema.updateTokenById(fakeId, { active: false });
 
             expect(updated).toBe(false);
         });
@@ -209,7 +206,7 @@ describe('Token CLI Management Tests', () => {
             // Wait a bit to ensure timestamp difference
             await new Promise(resolve => setTimeout(resolve, 10));
 
-            await tokenModel.updateById(tokenId, { active: false });
+            await TokenSchema.updateTokenById(tokenId, { active: false });
 
             const updatedToken = await TokenSchema.findById(tokenId);
             expect(updatedToken?.updatedAt.getTime()).toBeGreaterThan(
@@ -218,12 +215,12 @@ describe('Token CLI Management Tests', () => {
         });
 
         it('should allow reactivating a deactivated token', async () => {
-            await tokenModel.updateById(tokenId, { active: false });
+            await TokenSchema.updateTokenById(tokenId, { active: false });
 
             let dbToken = await TokenSchema.findById(tokenId);
             expect(dbToken?.active).toBe(false);
 
-            const updated = await tokenModel.updateById(tokenId, { active: true });
+            const updated = await TokenSchema.updateTokenById(tokenId, { active: true });
             expect(updated).toBe(true);
 
             dbToken = await TokenSchema.findById(tokenId);
@@ -233,7 +230,7 @@ describe('Token CLI Management Tests', () => {
 
     describe('Revoke Token (Delete)', () => {
         beforeEach(async () => {
-            await tokenModel.create({
+            await TokenSchema.createToken({
                 token: 'revoke_me',
                 name: 'Token to Revoke',
                 active: true,
@@ -241,7 +238,7 @@ describe('Token CLI Management Tests', () => {
         });
 
         it('should delete token by token string and remove from database', async () => {
-            const deleted = await tokenModel.deleteByToken('revoke_me');
+            const deleted = await TokenSchema.deleteTokenByToken('revoke_me');
 
             expect(deleted).toBe(true);
 
@@ -251,19 +248,19 @@ describe('Token CLI Management Tests', () => {
         });
 
         it('should return false when trying to delete non-existent token', async () => {
-            const deleted = await tokenModel.deleteByToken('nonexistent');
+            const deleted = await TokenSchema.deleteTokenByToken('nonexistent');
 
             expect(deleted).toBe(false);
         });
 
         it('should delete token by ID', async () => {
-            const token = await tokenModel.create({
+            const token = await TokenSchema.createToken({
                 token: 'delete_by_id',
                 name: 'Delete by ID',
                 active: true,
             });
 
-            const deleted = await tokenModel.deleteById(token._id.toString());
+            const deleted = await TokenSchema.deleteTokenById(token._id.toString());
 
             expect(deleted).toBe(true);
 
@@ -273,15 +270,15 @@ describe('Token CLI Management Tests', () => {
         });
 
         it('should not affect other tokens when deleting one', async () => {
-            await tokenModel.create({
+            await TokenSchema.createToken({
                 token: 'keep_me',
                 name: 'Token to Keep',
                 active: true,
             });
 
-            await tokenModel.deleteByToken('revoke_me');
+            await TokenSchema.deleteTokenByToken('revoke_me');
 
-            const allTokens = await tokenModel.findAll();
+            const allTokens = await TokenSchema.findAllTokens();
             expect(allTokens).toHaveLength(1);
             expect(allTokens[0].token).toBe('keep_me');
         });
@@ -291,7 +288,7 @@ describe('Token CLI Management Tests', () => {
         let tokenId: string;
 
         beforeEach(async () => {
-            const token = await tokenModel.create({
+            const token = await TokenSchema.createToken({
                 token: 'update_me',
                 name: 'Original Name',
                 active: true,
@@ -300,7 +297,7 @@ describe('Token CLI Management Tests', () => {
         });
 
         it('should update token name', async () => {
-            const updated = await tokenModel.updateById(tokenId, { name: 'Updated Name' });
+            const updated = await TokenSchema.updateTokenById(tokenId, { name: 'Updated Name' });
 
             expect(updated).toBe(true);
 
@@ -312,7 +309,7 @@ describe('Token CLI Management Tests', () => {
             const newExpiry = new Date();
             newExpiry.setDate(newExpiry.getDate() + 60);
 
-            const updated = await tokenModel.updateById(tokenId, { expiresAt: newExpiry });
+            const updated = await TokenSchema.updateTokenById(tokenId, { expiresAt: newExpiry });
 
             expect(updated).toBe(true);
 
@@ -322,7 +319,7 @@ describe('Token CLI Management Tests', () => {
         });
 
         it('should update multiple properties at once', async () => {
-            const updated = await tokenModel.updateById(tokenId, {
+            const updated = await TokenSchema.updateTokenById(tokenId, {
                 name: 'New Name',
                 active: false,
             });
@@ -340,7 +337,7 @@ describe('Token CLI Management Tests', () => {
             const pastDate = new Date();
             pastDate.setDate(pastDate.getDate() - 1);
 
-            const token = await tokenModel.create({
+            const token = await TokenSchema.createToken({
                 token: 'expired_token',
                 name: 'Expired Token',
                 active: true,
@@ -357,7 +354,7 @@ describe('Token CLI Management Tests', () => {
             const futureDate = new Date();
             futureDate.setDate(futureDate.getDate() + 30);
 
-            const token = await tokenModel.create({
+            const token = await TokenSchema.createToken({
                 token: 'future_token',
                 name: 'Future Expiry Token',
                 active: true,
@@ -369,7 +366,7 @@ describe('Token CLI Management Tests', () => {
         });
 
         it('should handle tokens without expiration', async () => {
-            const token = await tokenModel.create({
+            const token = await TokenSchema.createToken({
                 token: 'no_expiry_token',
                 name: 'No Expiry Token',
                 active: true,
@@ -384,7 +381,7 @@ describe('Token CLI Management Tests', () => {
         it('should maintain token uniqueness', async () => {
             const tokenString = 'unique_token_123';
 
-            await tokenModel.create({
+            await TokenSchema.createToken({
                 token: tokenString,
                 name: 'First Token',
                 active: true,
@@ -392,7 +389,7 @@ describe('Token CLI Management Tests', () => {
 
             // Attempting to create duplicate should fail at MongoDB level
             await expect(
-                tokenModel.create({
+                TokenSchema.createToken({
                     token: tokenString,
                     name: 'Duplicate Token',
                     active: true,
@@ -401,7 +398,7 @@ describe('Token CLI Management Tests', () => {
         });
 
         it('should handle concurrent token operations', async () => {
-            const token = await tokenModel.create({
+            const token = await TokenSchema.createToken({
                 token: 'concurrent_token',
                 name: 'Concurrent Test',
                 active: true,
@@ -409,9 +406,9 @@ describe('Token CLI Management Tests', () => {
 
             // Simulate concurrent updates
             const updates = [
-                tokenModel.updateById(token._id.toString(), { name: 'Update 1' }),
-                tokenModel.updateById(token._id.toString(), { name: 'Update 2' }),
-                tokenModel.updateById(token._id.toString(), { name: 'Update 3' }),
+                TokenSchema.updateTokenById(token._id.toString(), { name: 'Update 1' }),
+                TokenSchema.updateTokenById(token._id.toString(), { name: 'Update 2' }),
+                TokenSchema.updateTokenById(token._id.toString(), { name: 'Update 3' }),
             ];
 
             await Promise.all(updates);
@@ -422,7 +419,7 @@ describe('Token CLI Management Tests', () => {
         });
 
         it('should preserve timestamps on operations', async () => {
-            const token = await tokenModel.create({
+            const token = await TokenSchema.createToken({
                 token: 'timestamp_test',
                 name: 'Timestamp Test',
                 active: true,

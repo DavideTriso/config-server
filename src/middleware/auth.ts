@@ -1,11 +1,8 @@
-import { TokenModel } from '../database/TokenModel';
+import { TokenSchema } from '../database/schemas';
 import { AuthContextInterface, TokenInterface } from '../types';
 import { AuthRequestInterface } from './types/AuthRequestInterface';
 
-const tokenModel = new TokenModel();
-
-const UNAUTHENTICATED_CONTEXT: AuthContextInterface = { userId: null };
-const AUTHENTICATED_CONTEXT: AuthContextInterface = { userId: 'authenticated' };
+const UNAUTHENTICATED_CONTEXT: AuthContextInterface = { userId: null, isAdmin: false };
 
 function extractTokenFromHeader(authHeader: string | undefined): string | null {
     if (!authHeader) {
@@ -37,21 +34,24 @@ function isTokenValid(token: TokenInterface | null): boolean {
     return true;
 }
 
-async function authMiddleware(req: AuthRequestInterface): Promise<AuthContextInterface> {
-    const tokenString = extractTokenFromHeader(req.headers.authorization);
+async function authMiddleware(request: AuthRequestInterface): Promise<AuthContextInterface> {
+    const tokenString = extractTokenFromHeader(request.headers.authorization);
 
     if (!tokenString) {
         return UNAUTHENTICATED_CONTEXT;
     }
 
     try {
-        const tokenDoc = await tokenModel.findByToken(tokenString);
+        const tokenDoc = await TokenSchema.findByToken(tokenString);
 
         if (!isTokenValid(tokenDoc)) {
             return UNAUTHENTICATED_CONTEXT;
         }
 
-        return AUTHENTICATED_CONTEXT;
+        return {
+            userId: 'authenticated',
+            isAdmin: tokenDoc?.admin || false
+        };
     } catch (error) {
         console.error('Authentication error:', error);
         return UNAUTHENTICATED_CONTEXT;

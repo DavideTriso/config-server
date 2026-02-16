@@ -5,6 +5,7 @@ export interface TokenInterface {
     token: string;
     name: string;
     active: boolean;
+    admin: boolean;
     expiresAt?: Date;
     createdAt: Date;
     updatedAt: Date;

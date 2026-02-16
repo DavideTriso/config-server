@@ -1,4 +1,4 @@
-import { TokenDocumentInterface } from '../../document/types/TokenDocumentInterface';
+import { TokenDocumentInterface } from '../document/types/TokenDocumentInterface';
 import { randomBytes } from 'crypto';
 
 function generateToken(): string {

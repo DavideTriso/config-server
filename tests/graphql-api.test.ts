@@ -3,12 +3,13 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
 import typeDefs from '../src/graphql/schema';
 import resolvers from '../src/graphql/resolvers';
-import { ConfigurationModel, TokenModel as TokenSchema } from '../src/database/schemas';
+import { ConfigurationSchema } from '../src/document/ConfigurationModel';
+import { TokenSchema } from '../src/document/TokenModel';
 import { ResolverContextInterface } from '../src/types';
 import authMiddleware from '../src/middleware/auth';
 
 describe('GraphQL API Functional Tests', () => {
-    let mongoServer: MongoMemoryServer;
+    let mongoMemoryServer: MongoMemoryServer;
     let apolloServer: ApolloServer<ResolverContextInterface>;
     let validToken: string;
     let expiredToken: string;
@@ -23,14 +24,14 @@ describe('GraphQL API Functional Tests', () => {
 
     // Helper to get context from auth middleware
     const getAuthContext = async (token?: string) => {
-        const req = createMockRequest(token);
-        return await authMiddleware(req as any);
+        const request = createMockRequest(token);
+        return await authMiddleware(request as any);
     };
 
     beforeAll(async () => {
         // Start in-memory MongoDB
-        mongoServer = await MongoMemoryServer.create();
-        const mongoUri = mongoServer.getUri();
+        mongoMemoryServer = await MongoMemoryServer.create();
+        const mongoUri = mongoMemoryServer.getUri();
         await mongoose.connect(mongoUri);
 
         // Create Apollo Server
@@ -67,7 +68,7 @@ describe('GraphQL API Functional Tests', () => {
         inactiveToken = inactiveTokenDoc.token;
 
         // Seed test data
-        await ConfigurationModel.create([
+        await ConfigurationSchema.create([
             { key: 'theme', userId: 'user1', value: 'dark' },
             { key: 'language', userId: 'user1', value: 'en' },
             { key: 'theme', value: 'light' }, // default fallback
@@ -77,12 +78,12 @@ describe('GraphQL API Functional Tests', () => {
 
     afterAll(async () => {
         await mongoose.disconnect();
-        await mongoServer.stop();
+        await mongoMemoryServer.stop();
     });
 
     afterEach(async () => {
         // Clean up configurations created during tests (keep seed data)
-        await ConfigurationModel.deleteMany({
+        await ConfigurationSchema.deleteMany({
             key: { $nin: ['theme', 'language', 'timezone'] }
         });
     });
@@ -336,7 +337,7 @@ describe('GraphQL API Functional Tests', () => {
             }
 
             // Verify data was actually written to DB
-            const dbConfig = await ConfigurationModel.findOne({
+            const dbConfig = await ConfigurationSchema.findOne({
                 key: 'newconfig',
                 userId: 'testuser',
             });
@@ -375,7 +376,7 @@ describe('GraphQL API Functional Tests', () => {
             }
 
             // Verify data was updated in DB
-            const dbConfig = await ConfigurationModel.findOne({
+            const dbConfig = await ConfigurationSchema.findOne({
                 key: 'theme',
                 userId: 'user1',
             });
@@ -451,7 +452,7 @@ describe('GraphQL API Functional Tests', () => {
             }
 
             // Verify data was NOT written
-            const dbConfig = await ConfigurationModel.findOne({ key: '' });
+            const dbConfig = await ConfigurationSchema.findOne({ key: '' });
             expect(dbConfig).toBeNull();
         });
 
@@ -512,7 +513,7 @@ describe('GraphQL API Functional Tests', () => {
             }
 
             // Verify data was NOT written
-            const dbConfig = await ConfigurationModel.findOne({ key: 'invalid key with spaces' });
+            const dbConfig = await ConfigurationSchema.findOne({ key: 'invalid key with spaces' });
             expect(dbConfig).toBeNull();
         });
 
@@ -573,7 +574,7 @@ describe('GraphQL API Functional Tests', () => {
             }
 
             // Verify data was NOT written
-            const dbConfig = await ConfigurationModel.findOne({ key: 'testkey' });
+            const dbConfig = await ConfigurationSchema.findOne({ key: 'testkey' });
             expect(dbConfig).toBeNull();
         });
 

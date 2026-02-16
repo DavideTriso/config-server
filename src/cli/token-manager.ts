@@ -6,14 +6,12 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-import db from '../database/DatabaseConnection';
-import { TokenModel } from '../database/TokenModel';
+import databaseConnection from '../database/DatabaseConnection';
+import { TokenSchema } from '../document/TokenModel';
 import { TokenCreateInputInterface, TokenInterface } from '../types';
 import { CreateOptionsInterface } from './types/CreateOptionsInterface';
 import { RevokeOptionsInterface } from './types/RevokeOptionsInterface';
 import { DeactivateOptionsInterface } from './types/DeactivateOptionsInterface';
-
-const tokenModel = new TokenModel();
 
 function generateToken(): string {
     return crypto.randomBytes(32).toString('hex');
@@ -21,10 +19,10 @@ function generateToken(): string {
 
 async function withDatabaseConnection<T>(callback: () => Promise<T>): Promise<T> {
     try {
-        await db.connect();
+        await databaseConnection.connect();
         return await callback();
     } finally {
-        await db.disconnect();
+        await databaseConnection.disconnect();
     }
 }
 
@@ -38,7 +36,8 @@ function buildTokenData(options: CreateOptionsInterface): TokenCreateInputInterf
     const tokenData: TokenCreateInputInterface = {
         token: generateToken(),
         name: options.name || 'CLI Generated Token',
-        active: true
+        active: true,
+        admin: options.admin || false
     };
 
     if (options.expires) {
@@ -86,7 +85,7 @@ async function handleCreateToken(options: CreateOptionsInterface): Promise<void>
     try {
         await withDatabaseConnection(async () => {
             const tokenData = buildTokenData(options);
-            const result = await tokenModel.create(tokenData);
+            const result = await TokenSchema.createToken(tokenData);
             displayTokenInfo(result);
         });
     } catch (error) {
@@ -97,7 +96,7 @@ async function handleCreateToken(options: CreateOptionsInterface): Promise<void>
 async function handleListTokens(): Promise<void> {
     try {
         await withDatabaseConnection(async () => {
-            const tokens = await tokenModel.findAll();
+            const tokens = await TokenSchema.findAllTokens();
             displayTokenList(tokens);
         });
     } catch (error) {
@@ -108,7 +107,7 @@ async function handleListTokens(): Promise<void> {
 async function handleRevokeToken(options: RevokeOptionsInterface): Promise<void> {
     try {
         await withDatabaseConnection(async () => {
-            const deleted = await tokenModel.deleteByToken(options.token);
+            const deleted = await TokenSchema.deleteTokenByToken(options.token);
             console.log(deleted ? 'Token revoked successfully.' : 'Token not found.');
         });
     } catch (error) {
@@ -119,7 +118,7 @@ async function handleRevokeToken(options: RevokeOptionsInterface): Promise<void>
 async function handleDeactivateToken(options: DeactivateOptionsInterface): Promise<void> {
     try {
         await withDatabaseConnection(async () => {
-            const updated = await tokenModel.updateById(options.id, { active: false });
+            const updated = await TokenSchema.updateTokenById(options.id, { active: false });
             console.log(updated ? 'Token deactivated successfully.' : 'Token not found.');
         });
     } catch (error) {
@@ -134,6 +133,7 @@ program
     .description('Create a new token')
     .option('-n, --name <name>', 'Token name/description')
     .option('-e, --expires <days>', 'Token expires in X days')
+    .option('-a, --admin', 'Create admin token (can manage default configurations)')
     .action(handleCreateToken);
 
 program

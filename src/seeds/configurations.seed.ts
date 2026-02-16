@@ -1,4 +1,4 @@
-import { ConfigurationDocumentInterface } from '../../document/types/ConfigurationDocumentInterface';
+import { ConfigurationDocumentInterface } from '../document/types/ConfigurationDocumentInterface';
 import { faker } from '@faker-js/faker';
 import { ValueGeneratorType } from './types/ValueGeneratorType';
 import { KeyPatternsInterface } from './types/KeyPatternsInterface';

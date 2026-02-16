@@ -6,8 +6,9 @@ import { Model } from 'mongoose';
 
 dotenv.config();
 
-import db from '../database/DatabaseConnection';
-import { ConfigurationModel, TokenModel } from '../database/schemas';
+import databaseConnection from '../database/DatabaseConnection';
+import { ConfigurationSchema } from '../document/ConfigurationModel';
+import { TokenSchema } from '../document/TokenModel';
 
 const NAMESPACED_COLLECTION_NOT_FOUND = 26;
 
@@ -71,17 +72,17 @@ async function bootstrapDev(): Promise<void> {
         console.log('Starting development environment bootstrap...\n');
 
         console.log('Connecting to database...');
-        await db.connect();
+        await databaseConnection.connect();
         console.log('Connected to database\n');
 
-        await dropCollectionWithIndexes(ConfigurationModel, 'Configurations');
-        await dropCollectionWithIndexes(TokenModel, 'Tokens');
+        await dropCollectionWithIndexes(ConfigurationSchema, 'Configurations');
+        await dropCollectionWithIndexes(TokenSchema, 'Tokens');
 
         console.log('\nRecreating collections with indexes...');
-        await recreateCollectionIndexes(ConfigurationModel, 'Configurations');
-        await recreateCollectionIndexes(TokenModel, 'Tokens');
+        await recreateCollectionIndexes(ConfigurationSchema, 'Configurations');
+        await recreateCollectionIndexes(TokenSchema, 'Tokens');
 
-        await db.disconnect();
+        await databaseConnection.disconnect();
         await runSeedCommand();
 
         console.log('\nDevelopment environment bootstrap completed!\n');

@@ -1,6 +1,6 @@
 export interface TokenCreateInputInterface {
-    token: string;
     name: string;
     active: boolean;
+    admin?: boolean;
     expiresAt?: Date;
 }

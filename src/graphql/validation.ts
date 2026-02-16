@@ -25,7 +25,7 @@ export const configKeySchema = z
  * Validation schema for userId
  * - Length: 1-200 characters
  * - Allowed characters: same as key
- * - Optional (can be null)
+ * - Required (cannot be null or undefined)
  */
 export const userIdSchema = z
     .string()
@@ -34,9 +34,7 @@ export const userIdSchema = z
     .regex(
         KEY_USER_PATTERN,
         'UserId can only contain alphanumeric characters and the following special characters: @ _ - / \\ | & . : # $ [ ] { } ( )'
-    )
-    .nullable()
-    .optional();
+    );
 
 /**
  * Validation schema for configuration value

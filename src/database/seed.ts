@@ -2,17 +2,18 @@
 
 import { Command } from 'commander';
 import dotenv from 'dotenv';
-import db from './connection';
-import { ConfigurationModel, TokenModel } from './schemas';
-import { configurationsData } from './seeds/configurations.seed';
-import { tokensData } from './seeds/tokens.seed';
+import databaseConnection from './DatabaseConnection';
+import { ConfigurationSchema } from '../document/ConfigurationModel';
+import { TokenSchema } from '../document/TokenModel';
+import { configurationsData } from '../seeds/configurations.seed';
+import { tokensData } from '../seeds/tokens.seed';
 import { SeedOptionsInterface } from './types/SeedOptionsInterface';
 
 dotenv.config();
 
 const program = new Command();
 
-async function clearCollection(model: typeof ConfigurationModel | typeof TokenModel, name: string): Promise<void> {
+async function clearCollection(model: typeof ConfigurationSchema | typeof TokenSchema, name: string): Promise<void> {
     console.log(`  Clearing existing ${name}...`);
     await model.deleteMany();
 }
@@ -21,13 +22,13 @@ async function seedConfigurations(clear: boolean = false): Promise<void> {
     console.log('\nSeeding configurations...');
 
     if (clear) {
-        await clearCollection(ConfigurationModel, 'configurations');
+        await clearCollection(ConfigurationSchema, 'configurations');
     }
 
     console.log(`  Inserting ${configurationsData.length} configurations...`);
-    await ConfigurationModel.insertMany(configurationsData);
+    await ConfigurationSchema.insertMany(configurationsData);
 
-    const count = await ConfigurationModel.countDocuments();
+    const count = await ConfigurationSchema.countDocuments();
     console.log(`  Configurations seeded successfully. Total: ${count}`);
 }
 
@@ -44,13 +45,13 @@ async function seedTokens(clear: boolean = false): Promise<void> {
     console.log('\nSeeding tokens...');
 
     if (clear) {
-        await clearCollection(TokenModel, 'tokens');
+        await clearCollection(TokenSchema, 'tokens');
     }
 
     console.log(`  Inserting ${tokensData.length} tokens...`);
-    const insertedTokens = await TokenModel.insertMany(tokensData);
+    const insertedTokens = await TokenSchema.insertMany(tokensData);
 
-    const count = await TokenModel.countDocuments();
+    const count = await TokenSchema.countDocuments();
     console.log(`  Tokens seeded successfully. Total: ${count}`);
 
     displayGeneratedTokens(insertedTokens);
@@ -67,7 +68,7 @@ function shouldSeedCollection(collections: string[], collectionName: string): bo
 async function seedDatabase(options: SeedOptionsInterface): Promise<void> {
     try {
         console.log('Connecting to database...');
-        await db.connect();
+        await databaseConnection.connect();
         console.log('Connected to database');
 
         const collections = parseCollections(options);
@@ -85,7 +86,7 @@ async function seedDatabase(options: SeedOptionsInterface): Promise<void> {
         console.error('\nError seeding database:', error);
         process.exit(1);
     } finally {
-        await db.disconnect();
+        await databaseConnection.disconnect();
     }
 }
 

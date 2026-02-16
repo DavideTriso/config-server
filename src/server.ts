@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-import db from './database/DatabaseConnection';
+import databaseConnection from './database/DatabaseConnection';
 import typeDefs from './graphql/schema';
 import resolvers from './graphql/resolvers';
 import authMiddleware from './middleware/auth';
@@ -20,7 +20,7 @@ function createApolloServer(): ApolloServer<ResolverContextInterface> {
 function setupGracefulShutdown(): void {
     const shutdownHandler = async (signal: string) => {
         console.log(`${signal} received, shutting down gracefully`);
-        await db.disconnect();
+        await databaseConnection.disconnect();
         process.exit(0);
     };
 
@@ -29,14 +29,14 @@ function setupGracefulShutdown(): void {
 }
 
 async function startServer(): Promise<void> {
-    await db.connect();
+    await databaseConnection.connect();
 
     const server = createApolloServer();
 
     const { url } = await startStandaloneServer(server, {
         listen: { port: parseInt(process.env.PORT || '4000') },
-        context: async ({ req }) => {
-            return await authMiddleware(req);
+        context: async ({ req: request }) => {
+            return await authMiddleware(request);
         },
     });
 

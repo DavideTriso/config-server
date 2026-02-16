@@ -1,10 +1,7 @@
 import mongoose, { Schema } from 'mongoose';
-import { ConfigurationDocumentInterface } from './types/ConfigurationDocumentInterface';
-import { TokenDocumentInterface } from './types/TokenDocumentInterface';
+import { ConfigurationDocumentInterface } from '../document/types/ConfigurationDocumentInterface';
+import { TokenDocumentInterface } from '../document/types/TokenDocumentInterface';
 
-// Re-export for convenience
-export type ConfigurationDocument = ConfigurationDocumentInterface;
-export type TokenDocument = TokenDocumentInterface;
 
 const configurationSchema = new Schema<ConfigurationDocumentInterface>(
     {
@@ -39,6 +36,7 @@ const tokenSchema = new Schema<TokenDocumentInterface>(
         token: { type: String, required: true },
         name: { type: String, required: true },
         active: { type: Boolean, required: true, default: true },
+        admin: { type: Boolean, required: true, default: false },
         expiresAt: { type: Date }
     },
     {
