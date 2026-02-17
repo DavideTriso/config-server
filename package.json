@@ -7,12 +7,9 @@
         "build": "tsc",
         "start": "npm run build && node dist/index.js",
         "dev": "ts-node index.ts",
-        "token": "ts-node src/cli/token-manager.ts",
-        "seed": "ts-node src/database/seed.ts",
-        "bootstrap-dev": "ts-node src/cli/bootstrap-dev.ts",
+        "seed": "ts-node src/cli/seed.ts",
         "test": "jest",
-        "clean": "rm -rf dist",
-        "prepublishOnly": "npm run build"
+        "clean": "rm -rf dist"
     },
     "bin": {
         "config-server-token": "./dist/src/cli/token-manager.js"

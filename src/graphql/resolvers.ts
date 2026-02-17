@@ -1,70 +1,47 @@
-import { ConfigurationSchema } from '../document/ConfigurationModel';
+import ConfigurationModel from '../model/ConfigurationModel';
 import { GraphQLJSON } from 'graphql-type-json';
-import { ResolverContextInterface } from '../types';
-import { ConfigurationsArgsInterface } from './types/ConfigurationsArgsInterface';
-import { UpsertConfigurationArgsInterface } from './types/UpsertConfigurationArgsInterface';
-import { validateConfigurationInput } from './validation';
-import { ZodError } from 'zod';
+import ConfigurationsResolverArgsInterface from './types/ConfigurationsResolverArgsInterface';
+import UpsertConfigurationResolverArgsInterface from './types/UpsertConfigurationResolverArgsInterface';
+import ResolverContextInterface from './types/ResolverContextInterface';
+import handleError from './handleError';
 
 const resolvers = {
     JSON: GraphQLJSON,
 
     Query: {
-        async configurations(_parent: unknown, { userId, keys }: ConfigurationsArgsInterface, { userId: contextUserId }: ResolverContextInterface) {
-            if (!contextUserId) {
-                throw new Error('Authentication required');
+        async configurations(
+            _parent: unknown,
+            args: ConfigurationsResolverArgsInterface,
+            context: ResolverContextInterface
+        ) {
+            try {
+                return await ConfigurationModel.findByUserIdAndKeys(
+                    { userId: args.userId, keys: args.keys },
+                    true,
+                    context.token
+                );
+            } catch (error) {
+                handleError(error);
             }
-
-            return await ConfigurationSchema.findByUserIdAndKeys(userId, keys);
         }
     },
 
     Mutation: {
-        async upsertConfiguration(_parent: unknown, { key, userId, value }: UpsertConfigurationArgsInterface, { userId: contextUserId }: ResolverContextInterface) {
-            if (!contextUserId) {
-                throw new Error('Authentication required');
-            }
-
-            try {
-                validateConfigurationInput({ key, value, userId });
-            } catch (error) {
-                if (error instanceof ZodError) {
-                    const messages = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join('; ');
-                    throw new Error(`Validation failed: ${messages}`);
-                }
-                throw error;
-            }
-
-            return await ConfigurationSchema.upsertConfiguration(key, userId, value);
-        },
-
-        async upsertDefaultConfigurations(
+        async upsertConfiguration(
             _parent: unknown,
-            { configurations }: { configurations: Array<{ key: string; value: unknown }> },
-            { userId: contextUserId, isAdmin }: ResolverContextInterface
+            args: UpsertConfigurationResolverArgsInterface,
+            context: ResolverContextInterface
         ) {
-            if (!contextUserId) {
-                throw new Error('Authentication required');
+            try {
+                return await ConfigurationModel
+                    .upsert(
+                        { key: args.key, userId: args.userId, value: args.value },
+                        true,
+                        context.token
+                    );
+            } catch (error) {
+                handleError(error);
             }
-
-            if (!isAdmin) {
-                throw new Error('Admin privileges required to manage default configurations');
-            }
-
-            // Validate all configurations
-            for (const config of configurations) {
-                try {
-                    validateConfigurationInput({ key: config.key, value: config.value, userId: 'default' });
-                } catch (error) {
-                    if (error instanceof ZodError) {
-                        const messages = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join('; ');
-                        throw new Error(`Validation failed for key "${config.key}": ${messages}`);
-                    }
-                    throw error;
-                }
-            }
-
-            return await ConfigurationSchema.upsertDefaultConfigurations(configurations);
         }
     }
 };

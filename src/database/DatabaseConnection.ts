@@ -1,44 +1,39 @@
 import mongoose from 'mongoose';
 
-class DatabaseConnection {
+export default class DatabaseConnection {
+
     private isConnected: boolean = false;
 
-    private getConnectionOptions() {
-        return {
-            maxPoolSize: 10,
-            minPoolSize: 2,
-            maxIdleTimeMS: 30000,
-            serverSelectionTimeoutMS: 5000,
-            socketTimeoutMS: 45000,
-        };
-    }
+    private readonly CONNECTION_OPTIONS = {
+        maxPoolSize: 10,
+        minPoolSize: 2,
+        maxIdleTimeMS: 30000,
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 45000,
+    };
 
     private setupEventListeners(): void {
         mongoose.connection.on('connected', () => {
-            console.log('Connected to MongoDB with connection pooling');
+            this.isConnected = true;
+            console.log('Connected to MongoDB');
         });
 
-        mongoose.connection.on('error', (err) => {
-            console.error('MongoDB connection error:', err);
+        mongoose.connection.on('error', (error) => {
+            console.error('MongoDB connection error:', error);
         });
 
         mongoose.connection.on('disconnected', () => {
-            console.log('Disconnected from MongoDB');
             this.isConnected = false;
+            console.log('Disconnected from MongoDB');
         });
     }
 
-    async connect(uri: string = process.env.MONGODB_URI || ''): Promise<typeof mongoose> {
-        if (this.isConnected) {
-            return mongoose;
-        }
+    async connect(uri: string = process.env.MONGODB_URI || ''): Promise<void> {
+        this.setupEventListeners();
 
         try {
-            const options = this.getConnectionOptions();
-            await mongoose.connect(uri, options);
+            await mongoose.connect(uri, this.CONNECTION_OPTIONS);
             this.isConnected = true;
-            this.setupEventListeners();
-            return mongoose;
         } catch (error) {
             console.error('MongoDB connection error:', error);
             this.isConnected = false;
@@ -54,13 +49,4 @@ class DatabaseConnection {
         await mongoose.disconnect();
         this.isConnected = false;
     }
-
-    getConnection(): typeof mongoose {
-        if (!this.isConnected) {
-            throw new Error('Database not connected. Call connect() first.');
-        }
-        return mongoose;
-    }
 }
-
-export default new DatabaseConnection();

@@ -5,16 +5,10 @@ const typeDefs = gql`
 
   type Configuration {
     key: String!
-    userId: String
+    userId: String!
     value: JSON!
-    createdAt: String
-    updatedAt: String
-    upserted: Boolean
-  }
-
-  input DefaultConfigurationInput {
-    key: String!
-    value: JSON!
+    createdOnDateTime: String
+    updatedOnDateTime: String
   }
 
   type Query {
@@ -23,7 +17,6 @@ const typeDefs = gql`
 
   type Mutation {
     upsertConfiguration(key: String!, userId: ID!, value: JSON!): Configuration!
-    upsertDefaultConfigurations(configurations: [DefaultConfigurationInput!]!): [Configuration!]!
   }
 `;
 

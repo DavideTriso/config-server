@@ -4,11 +4,11 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-import databaseConnection from './database/DatabaseConnection';
+import DatabaseConnection from './database/DatabaseConnection';
 import typeDefs from './graphql/schema';
 import resolvers from './graphql/resolvers';
-import authMiddleware from './middleware/auth';
-import { ResolverContextInterface } from './types';
+import contextMiddleware from './graphql/contextMiddleware';
+import ResolverContextInterface from './graphql/types/ResolverContextInterface';
 
 function createApolloServer(): ApolloServer<ResolverContextInterface> {
     return new ApolloServer<ResolverContextInterface>({
@@ -20,6 +20,7 @@ function createApolloServer(): ApolloServer<ResolverContextInterface> {
 function setupGracefulShutdown(): void {
     const shutdownHandler = async (signal: string) => {
         console.log(`${signal} received, shutting down gracefully`);
+        const databaseConnection = new DatabaseConnection();
         await databaseConnection.disconnect();
         process.exit(0);
     };
@@ -29,6 +30,7 @@ function setupGracefulShutdown(): void {
 }
 
 async function startServer(): Promise<void> {
+    const databaseConnection = new DatabaseConnection();
     await databaseConnection.connect();
 
     const server = createApolloServer();
@@ -36,7 +38,7 @@ async function startServer(): Promise<void> {
     const { url } = await startStandaloneServer(server, {
         listen: { port: parseInt(process.env.PORT || '4000') },
         context: async ({ req: request }) => {
-            return await authMiddleware(request);
+            return await contextMiddleware(request);
         },
     });
 
