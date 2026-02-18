@@ -5,7 +5,6 @@ import TokenDocumentInterface from './types/TokenInterface';
 const tokenSchema = new Schema<TokenDocumentInterface, TokenModelInterface>(
     {
         password: { type: String, required: true },
-        key: { type: String, required: true },
         name: { type: String, required: true },
         expired: { type: Boolean, required: true, default: false },
         expiredOnDateTime: { type: Schema.Types.Date }
@@ -14,13 +13,13 @@ const tokenSchema = new Schema<TokenDocumentInterface, TokenModelInterface>(
 );
 
 tokenSchema.index(
-    { key: 1 },
-    { name: 'idx_key', unique: true }
+    { name: 1 },
+    { name: 'idx_name', unique: true }
 );
 
 tokenSchema.index(
-    { key: 1, expired: 1 },
-    { name: 'idx_key_expired' }
+    { name: 1, expired: 1 },
+    { name: 'idx_name_expired' }
 );
 
 export const TokenModel = mongoose.model<TokenDocumentInterface, TokenModelInterface>(

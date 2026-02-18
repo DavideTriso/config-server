@@ -5,6 +5,7 @@ import { TokenModel as DatabaseTokenModel } from '../../src/database/TokenModel'
 import UnauthorizedError from '../../src/model/errors/UnauthorizedError';
 import InternalServerError from '../../src/model/errors/InternalServerError';
 import { ValidationError } from 'apollo-server-core';
+import DuplicateEntryError from '../../src/model/errors/DuplicaException';
 import bcrypt from 'bcrypt';
 
 describe('TokenModel', () => {
@@ -36,16 +37,10 @@ describe('TokenModel', () => {
             expect(result.token.name).toBe('test-token');
             expect(result.token.expired).toBe(false);
             expect(result.token.expiredOnDateTime).toBeNull();
-            expect(result.token.key).toBeDefined();
             expect(result.token.password).toBeDefined();
         });
 
-        it('should generate unique keys for different tokens', async () => {
-            const result1 = await TokenModel.create({ name: 'token1' });
-            const result2 = await TokenModel.create({ name: 'token2' });
 
-            expect(result1.token.key).not.toBe(result2.token.key);
-        });
 
         it('should generate unique passwords for different tokens', async () => {
             const result1 = await TokenModel.create({ name: 'token1' });
@@ -66,7 +61,7 @@ describe('TokenModel', () => {
             const result = await TokenModel.create({ name: 'test-token' });
 
             const parts = result.authorizationToken.split(':');
-            expect(parts).toHaveLength(4);
+            expect(parts).toHaveLength(3);
 
             // Verify all parts are base64 encoded
             parts.forEach(part => {
@@ -115,10 +110,34 @@ describe('TokenModel', () => {
                 .toThrow(ValidationError);
         });
 
+        it('should throw DuplicateEntryError when creating a token with a duplicate name', async () => {
+            const tokenName = 'duplicate-token-name';
+
+            // Create first token
+            await TokenModel.create({ name: tokenName });
+
+            // Attempt to create second token with same name
+            await expect(TokenModel.create({ name: tokenName }))
+                .rejects
+                .toThrow(DuplicateEntryError);
+        });
+
+        it('should throw DuplicateEntryError with descriptive message for duplicate name', async () => {
+            const tokenName = 'duplicate-token-name-2';
+
+            // Create first token
+            await TokenModel.create({ name: tokenName });
+
+            // Attempt to create second token with same name
+            await expect(TokenModel.create({ name: tokenName }))
+                .rejects
+                .toThrow(`Token with name '${tokenName}' already exists`);
+        });
+
         it('should persist token to database', async () => {
             const result = await TokenModel.create({ name: 'test-token' });
 
-            const dbToken = await DatabaseTokenModel.findOne({ key: result.token.key });
+            const dbToken = await DatabaseTokenModel.findOne({ name: result.token.name });
             expect(dbToken).toBeDefined();
             expect(dbToken?.name).toBe('test-token');
         });
@@ -137,7 +156,7 @@ describe('TokenModel', () => {
         it('should successfully expire a non-expired token', async () => {
             const created = await TokenModel.create({ name: 'test-token' });
 
-            const expired = await TokenModel.expire({ key: created.token.key });
+            const expired = await TokenModel.expire({ name: created.token.name });
 
             expect(expired).toBeDefined();
             expect(expired?.expired).toBe(true);
@@ -148,16 +167,16 @@ describe('TokenModel', () => {
             const created = await TokenModel.create({ name: 'test-token' });
 
             // Expire first time
-            await TokenModel.expire({ key: created.token.key });
+            await TokenModel.expire({ name: created.token.name });
 
             // Attempt to expire again
-            const result = await TokenModel.expire({ key: created.token.key });
+            const result = await TokenModel.expire({ name: created.token.name });
 
             expect(result).toBeNull();
         });
 
         it('should return null for non-existent tokens', async () => {
-            const result = await TokenModel.expire({ key: 'non-existent-key' });
+            const result = await TokenModel.expire({ name: 'non-existent-name' });
             expect(result).toBeNull();
         });
 
@@ -165,7 +184,7 @@ describe('TokenModel', () => {
             const created = await TokenModel.create({ name: 'test-token' });
             const beforeExpire = new Date();
 
-            const expired = await TokenModel.expire({ key: created.token.key });
+            const expired = await TokenModel.expire({ name: created.token.name });
             const afterExpire = new Date();
 
             expect(expired?.expiredOnDateTime).toBeDefined();
@@ -176,9 +195,9 @@ describe('TokenModel', () => {
         it('should persist expiration to database', async () => {
             const created = await TokenModel.create({ name: 'test-token' });
 
-            await TokenModel.expire({ key: created.token.key });
+            await TokenModel.expire({ name: created.token.name });
 
-            const dbToken = await DatabaseTokenModel.findOne({ key: created.token.key });
+            const dbToken = await DatabaseTokenModel.findOne({ name: created.token.name });
             expect(dbToken?.expired).toBe(true);
         });
     });
@@ -202,7 +221,7 @@ describe('TokenModel', () => {
         it('should delete both expired and non-expired tokens', async () => {
             const token1 = await TokenModel.create({ name: 'token1' });
             await TokenModel.create({ name: 'token2' });
-            await TokenModel.expire({ key: token1.token.key });
+            await TokenModel.expire({ name: token1.token.name });
 
             await TokenModel.deleteAll(true);
 
@@ -246,18 +265,18 @@ describe('TokenModel', () => {
 
         it('should throw UnauthorizedError for expired token', async () => {
             const created = await TokenModel.create({ name: 'test-token' });
-            await TokenModel.expire({ key: created.token.key });
+            await TokenModel.expire({ name: created.token.name });
 
             await expect(TokenModel.checkAuthorization(created.authorizationToken))
                 .rejects
                 .toThrow(UnauthorizedError);
         });
 
-        it('should throw UnauthorizedError for non-existent key', async () => {
+        it('should throw UnauthorizedError for non-existent name', async () => {
             const created = await TokenModel.create({ name: 'test-token' });
 
             // Delete the token from database
-            await DatabaseTokenModel.deleteOne({ key: created.token.key });
+            await DatabaseTokenModel.deleteOne({ name: created.token.name });
 
             await expect(TokenModel.checkAuthorization(created.authorizationToken))
                 .rejects
@@ -269,7 +288,7 @@ describe('TokenModel', () => {
 
             // Tamper with the HMAC part
             const parts = created.authorizationToken.split(':');
-            parts[3] = Buffer.from('tampered-hmac').toString('base64');
+            parts[2] = Buffer.from('tampered-hmac').toString('base64');
             const tamperedToken = parts.join(':');
 
             await expect(TokenModel.checkAuthorization(tamperedToken))
@@ -282,7 +301,7 @@ describe('TokenModel', () => {
 
             // Tamper with the password part
             const parts = created.authorizationToken.split(':');
-            parts[2] = Buffer.from('wrong-password').toString('base64');
+            parts[1] = Buffer.from('wrong-password').toString('base64');
             const tamperedToken = parts.join(':');
 
             await expect(TokenModel.checkAuthorization(tamperedToken))
@@ -295,7 +314,7 @@ describe('TokenModel', () => {
 
             // Change the password in the database
             await DatabaseTokenModel.findOneAndUpdate(
-                { key: created.token.key },
+                { name: created.token.name },
                 { password: await bcrypt.hash('different-password', 10) }
             );
 
@@ -310,7 +329,7 @@ describe('TokenModel', () => {
             // Create a new token with same parts but different HMAC
             const parts = created.authorizationToken.split(':');
             const wrongHmac = Buffer.from('completely-wrong').toString('base64');
-            const tokenWithWrongHmac = `${parts[0]}:${parts[1]}:${parts[2]}:${wrongHmac}`;
+            const tokenWithWrongHmac = `${parts[0]}:${parts[1]}:${wrongHmac}`;
 
             await expect(TokenModel.checkAuthorization(tokenWithWrongHmac))
                 .rejects
@@ -322,9 +341,9 @@ describe('TokenModel', () => {
 
             // Decode and modify password casing
             const parts = created.authorizationToken.split(':');
-            const password = Buffer.from(parts[2], 'base64').toString('utf-8');
+            const password = Buffer.from(parts[1], 'base64').toString('utf-8');
             const modifiedPassword = password.toUpperCase();
-            parts[2] = Buffer.from(modifiedPassword).toString('base64');
+            parts[1] = Buffer.from(modifiedPassword).toString('base64');
             const modifiedToken = parts.join(':');
 
             await expect(TokenModel.checkAuthorization(modifiedToken))
@@ -373,7 +392,7 @@ describe('TokenModel', () => {
             const created = await TokenModel.create({ name: 'test-token' });
 
             const parts = created.authorizationToken.split(':');
-            parts[3] = Buffer.from('tampered').toString('base64');
+            parts[2] = Buffer.from('tampered').toString('base64');
             const tamperedToken = parts.join(':');
 
             expect(() => TokenModel.getNameFromAuthorizationToken(tamperedToken))
@@ -402,7 +421,7 @@ describe('TokenModel', () => {
 
             // Tamper with name but recalculate HMAC incorrectly
             const parts = created.authorizationToken.split(':');
-            parts[1] = Buffer.from('tampered-name').toString('base64');
+            parts[0] = Buffer.from('tampered-name').toString('base64');
             const tamperedToken = parts.join(':'); // HMAC is now invalid
 
             expect(() => TokenModel.getNameFromAuthorizationToken(tamperedToken))
@@ -424,25 +443,18 @@ describe('TokenModel', () => {
     });
 
     describe('Authorization Token Generation and Validation', () => {
-        it('should generate different authorization tokens for same name', async () => {
-            const result1 = await TokenModel.create({ name: 'same-name' });
-            const result2 = await TokenModel.create({ name: 'same-name' });
-
-            expect(result1.authorizationToken).not.toBe(result2.authorizationToken);
-        });
-
         it('should include proper separators in authorization token', async () => {
             const created = await TokenModel.create({ name: 'test-token' });
 
             const colonCount = (created.authorizationToken.match(/:/g) || []).length;
-            expect(colonCount).toBe(3);
+            expect(colonCount).toBe(2);
         });
 
         it('should generate HMAC using SHA512', async () => {
             const created = await TokenModel.create({ name: 'test-token' });
 
             const parts = created.authorizationToken.split(':');
-            const hmac = Buffer.from(parts[3], 'base64').toString('hex');
+            const hmac = Buffer.from(parts[2], 'base64').toString('hex');
 
             // SHA512 produces 128 hex characters (64 bytes)
             expect(hmac.length).toBe(128);
@@ -458,7 +470,7 @@ describe('TokenModel', () => {
 
             // Token with different HMAC should fail
             const parts = created.authorizationToken.split(':');
-            parts[3] = Buffer.from('A'.repeat(128)).toString('base64');
+            parts[2] = Buffer.from('A'.repeat(128)).toString('base64');
             const wrongHmacToken = parts.join(':');
 
             await expect(TokenModel.checkAuthorization(wrongHmacToken))
@@ -487,15 +499,8 @@ describe('TokenModel', () => {
         it('should generate long random passwords', async () => {
             const created = await TokenModel.create({ name: 'test-token' });
 
-            // Password should be hashed, so it will be at least 50 characters
+            // Password should be hashed (bcrypt), so it will be at least 50 characters
             expect(created.token.password.length).toBeGreaterThan(50);
-        });
-
-        it('should generate different passwords even for same name', async () => {
-            const result1 = await TokenModel.create({ name: 'test' });
-            const result2 = await TokenModel.create({ name: 'test' });
-
-            expect(result1.token.password).not.toBe(result2.token.password);
         });
     });
 
@@ -509,10 +514,10 @@ describe('TokenModel', () => {
 
             expect(results).toHaveLength(10);
 
-            // All keys should be unique
-            const keys = results.map(r => r.token.key);
-            const uniqueKeys = new Set(keys);
-            expect(uniqueKeys.size).toBe(10);
+            // All authorization tokens should be unique
+            const authTokens = results.map(r => r.authorizationToken);
+            const uniqueAuthTokens = new Set(authTokens);
+            expect(uniqueAuthTokens.size).toBe(10);
         });
 
         it('should handle token names at minimum length (3 characters)', async () => {
@@ -526,13 +531,13 @@ describe('TokenModel', () => {
             expect(result.token.name).toBe(specialChars);
         });
 
-        it('should reject tokens with only 3 parts in authorization string', () => {
-            expect(() => TokenModel.getNameFromAuthorizationToken('a:b:c'))
+        it('should reject tokens with only 2 parts in authorization string', () => {
+            expect(() => TokenModel.getNameFromAuthorizationToken('a:b'))
                 .toThrow(UnauthorizedError);
         });
 
-        it('should reject tokens with more than 4 parts', () => {
-            expect(() => TokenModel.getNameFromAuthorizationToken('a:b:c:d:e'))
+        it('should reject tokens with more than 3 parts', () => {
+            expect(() => TokenModel.getNameFromAuthorizationToken('a:b:c:d'))
                 .toThrow(UnauthorizedError);
         });
 
@@ -551,11 +556,11 @@ describe('TokenModel', () => {
     });
 
     describe('Security Tests', () => {
-        it('should not accept tokens with modified key component', async () => {
+        it('should not accept tokens with modified name component', async () => {
             const created = await TokenModel.create({ name: 'test-token' });
 
             const parts = created.authorizationToken.split(':');
-            parts[0] = Buffer.from('modified-key').toString('base64');
+            parts[0] = Buffer.from('modified-name').toString('base64');
             const modifiedToken = parts.join(':');
 
             await expect(TokenModel.checkAuthorization(modifiedToken))
@@ -570,10 +575,10 @@ describe('TokenModel', () => {
             const parts = created.authorizationToken.split(':');
 
             // Wrong HMAC at start
-            const wrongStart = `${parts[0]}:${parts[1]}:${parts[2]}:${Buffer.from('A'.repeat(128)).toString('base64')}`;
+            const wrongStart = `${parts[0]}:${parts[1]}:${Buffer.from('A'.repeat(128)).toString('base64')}`;
 
             // Wrong HMAC at end  
-            const wrongEnd = `${parts[0]}:${parts[1]}:${parts[2]}:${Buffer.from('Z'.repeat(128)).toString('base64')}`;
+            const wrongEnd = `${parts[0]}:${parts[1]}:${Buffer.from('Z'.repeat(128)).toString('base64')}`;
 
             await expect(TokenModel.checkAuthorization(wrongStart))
                 .rejects
@@ -588,16 +593,16 @@ describe('TokenModel', () => {
             const created = await TokenModel.create({ name: 'test-token' });
             const parts = created.authorizationToken.split(':');
 
-            // Create token with non-existent key
-            parts[0] = Buffer.from('non-existent-key').toString('base64');
+            // Create token with non-existent name
+            parts[0] = Buffer.from('non-existent-name').toString('base64');
 
             // Recalculate HMAC for the tampered token
-            const authTokenWithoutHmac = `${parts[0]}:${parts[1]}:${parts[2]}`;
+            const authTokenWithoutHmac = `${parts[0]}:${parts[1]}`;
             const crypto = require('crypto');
             const newHmac = crypto.createHmac('sha512', process.env.APP_SECRET)
                 .update(authTokenWithoutHmac)
                 .digest('hex');
-            parts[3] = Buffer.from(newHmac).toString('base64');
+            parts[2] = Buffer.from(newHmac).toString('base64');
 
             const nonExistentToken = parts.join(':');
 
@@ -634,7 +639,7 @@ describe('TokenModel', () => {
             // Extract the actual passwords by checking authorization tokens
             const passwords = results.map(r => {
                 const parts = r.authorizationToken.split(':');
-                return Buffer.from(parts[2], 'base64').toString('utf-8');
+                return Buffer.from(parts[1], 'base64').toString('utf-8');
             });
 
             // All passwords should be unique
@@ -664,7 +669,7 @@ describe('TokenModel', () => {
             expect(name).toBe('lifecycle-token');
 
             // Expire
-            const expired = await TokenModel.expire({ key: created.token.key });
+            const expired = await TokenModel.expire({ name: created.token.name });
             expect(expired?.expired).toBe(true);
 
             // Authorization should fail after expiration
@@ -687,7 +692,7 @@ describe('TokenModel', () => {
                 .resolves.not.toThrow();
 
             // Expire one
-            await TokenModel.expire({ key: token2.token.key });
+            await TokenModel.expire({ name: token2.token.name });
 
             // Token 2 should fail, others should still work
             await expect(TokenModel.checkAuthorization(token1.authorizationToken))
@@ -706,8 +711,8 @@ describe('TokenModel', () => {
             ]);
 
             // Expire some tokens
-            await TokenModel.expire({ key: tokens[0].token.key });
-            await TokenModel.expire({ key: tokens[2].token.key });
+            await TokenModel.expire({ name: tokens[0].token.name });
+            await TokenModel.expire({ name: tokens[2].token.name });
 
             // Verify database state
             const allTokens = await DatabaseTokenModel.find({});

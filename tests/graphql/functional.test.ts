@@ -293,6 +293,7 @@ describe('GraphQL API Functional Tests', () => {
             if (response.body.kind === 'single') {
                 expect(response.body.singleResult.errors).toBeDefined();
                 expect(response.body.singleResult.errors?.[0].message).toContain('Unauthorized');
+                expect(response.body.singleResult.errors?.[0].extensions?.code).toBe('UNAUTHORIZED');
             }
         });
 
@@ -323,6 +324,139 @@ describe('GraphQL API Functional Tests', () => {
             if (response.body.kind === 'single') {
                 expect(response.body.singleResult.errors).toBeDefined();
                 expect(response.body.singleResult.errors?.[0].message).toContain('Unauthorized');
+                expect(response.body.singleResult.errors?.[0].extensions?.code).toBe('UNAUTHORIZED');
+            }
+        });
+
+        it('should fail with authorization token missing Bearer prefix', async () => {
+            const query = `
+                query GetConfigurations($userId: ID!) {
+                    configurations(userId: $userId) {
+                        key
+                        userId
+                        value
+                    }
+                }
+            `;
+
+            const response = await server.executeOperation(
+                {
+                    query,
+                    variables: { userId: 'user123' },
+                },
+                {
+                    contextValue: contextMiddleware({
+                        headers: { authorization: authorizationToken },
+                    } as any),
+                }
+            );
+
+            expect(response.body.kind).toBe('single');
+            if (response.body.kind === 'single') {
+                expect(response.body.singleResult.errors).toBeDefined();
+                expect(response.body.singleResult.errors?.[0].message).toContain('Unauthorized');
+                expect(response.body.singleResult.errors?.[0].extensions?.code).toBe('UNAUTHORIZED');
+            }
+        });
+
+        it('should fail with malformed authorization token', async () => {
+            const query = `
+                query GetConfigurations($userId: ID!) {
+                    configurations(userId: $userId) {
+                        key
+                        userId
+                        value
+                    }
+                }
+            `;
+
+            const response = await server.executeOperation(
+                {
+                    query,
+                    variables: { userId: 'user123' },
+                },
+                {
+                    contextValue: contextMiddleware({
+                        headers: { authorization: 'Bearer not:a:valid:token:format' },
+                    } as any),
+                }
+            );
+
+            expect(response.body.kind).toBe('single');
+            if (response.body.kind === 'single') {
+                expect(response.body.singleResult.errors).toBeDefined();
+                expect(response.body.singleResult.errors?.[0].message).toContain('Unauthorized');
+                expect(response.body.singleResult.errors?.[0].extensions?.code).toBe('UNAUTHORIZED');
+            }
+        });
+
+        it('should fail with expired token', async () => {
+            // Create and immediately expire a token
+            const tokenResult = await TokenModel.create({ name: 'expired-token' });
+            await TokenModel.expire({ name: tokenResult.token.name });
+
+            const query = `
+                query GetConfigurations($userId: ID!) {
+                    configurations(userId: $userId) {
+                        key
+                        userId
+                        value
+                    }
+                }
+            `;
+
+            const response = await server.executeOperation(
+                {
+                    query,
+                    variables: { userId: 'user123' },
+                },
+                {
+                    contextValue: contextMiddleware({
+                        headers: { authorization: `Bearer ${tokenResult.authorizationToken}` },
+                    } as any),
+                }
+            );
+
+            expect(response.body.kind).toBe('single');
+            if (response.body.kind === 'single') {
+                expect(response.body.singleResult.errors).toBeDefined();
+                expect(response.body.singleResult.errors?.[0].message).toContain('Unauthorized');
+                expect(response.body.singleResult.errors?.[0].extensions?.code).toBe('UNAUTHORIZED');
+            }
+        });
+
+        it('should fail with token containing invalid HMAC', async () => {
+            // Create a token and tamper with it
+            const parts = authorizationToken.split(':');
+            const tamperedToken = `${parts[0]}:${parts[1]}:${parts[2]}:invalidhmac`;
+
+            const query = `
+                query GetConfigurations($userId: ID!) {
+                    configurations(userId: $userId) {
+                        key
+                        userId
+                        value
+                    }
+                }
+            `;
+
+            const response = await server.executeOperation(
+                {
+                    query,
+                    variables: { userId: 'user123' },
+                },
+                {
+                    contextValue: contextMiddleware({
+                        headers: { authorization: `Bearer ${tamperedToken}` },
+                    } as any),
+                }
+            );
+
+            expect(response.body.kind).toBe('single');
+            if (response.body.kind === 'single') {
+                expect(response.body.singleResult.errors).toBeDefined();
+                expect(response.body.singleResult.errors?.[0].message).toContain('Unauthorized');
+                expect(response.body.singleResult.errors?.[0].extensions?.code).toBe('UNAUTHORIZED');
             }
         });
     });
@@ -498,6 +632,113 @@ describe('GraphQL API Functional Tests', () => {
             if (response.body.kind === 'single') {
                 expect(response.body.singleResult.errors).toBeDefined();
                 expect(response.body.singleResult.errors?.[0].message).toContain('Unauthorized');
+                expect(response.body.singleResult.errors?.[0].extensions?.code).toBe('UNAUTHORIZED');
+            }
+        });
+
+        it('should fail with invalid authorization token', async () => {
+            const mutation = `
+                mutation UpsertConfiguration($key: String!, $userId: ID!, $value: JSON!) {
+                    upsertConfiguration(key: $key, userId: $userId, value: $value) {
+                        key
+                        value
+                    }
+                }
+            `;
+
+            const response = await server.executeOperation(
+                {
+                    query: mutation,
+                    variables: {
+                        key: 'theme',
+                        userId: 'user123',
+                        value: { mode: 'dark' },
+                    },
+                },
+                {
+                    contextValue: contextMiddleware({
+                        headers: { authorization: 'Bearer invalid-token' },
+                    } as any),
+                }
+            );
+
+            expect(response.body.kind).toBe('single');
+            if (response.body.kind === 'single') {
+                expect(response.body.singleResult.errors).toBeDefined();
+                expect(response.body.singleResult.errors?.[0].message).toContain('Unauthorized');
+                expect(response.body.singleResult.errors?.[0].extensions?.code).toBe('UNAUTHORIZED');
+            }
+        });
+
+        it('should fail with expired token', async () => {
+            // Create and immediately expire a token
+            const tokenResult = await TokenModel.create({ name: 'mutation-expired-token' });
+            await TokenModel.expire({ name: tokenResult.token.name });
+
+            const mutation = `
+                mutation UpsertConfiguration($key: String!, $userId: ID!, $value: JSON!) {
+                    upsertConfiguration(key: $key, userId: $userId, value: $value) {
+                        key
+                        value
+                    }
+                }
+            `;
+
+            const response = await server.executeOperation(
+                {
+                    query: mutation,
+                    variables: {
+                        key: 'theme',
+                        userId: 'user123',
+                        value: { mode: 'dark' },
+                    },
+                },
+                {
+                    contextValue: contextMiddleware({
+                        headers: { authorization: `Bearer ${tokenResult.authorizationToken}` },
+                    } as any),
+                }
+            );
+
+            expect(response.body.kind).toBe('single');
+            if (response.body.kind === 'single') {
+                expect(response.body.singleResult.errors).toBeDefined();
+                expect(response.body.singleResult.errors?.[0].message).toContain('Unauthorized');
+                expect(response.body.singleResult.errors?.[0].extensions?.code).toBe('UNAUTHORIZED');
+            }
+        });
+
+        it('should fail with authorization token missing Bearer prefix', async () => {
+            const mutation = `
+                mutation UpsertConfiguration($key: String!, $userId: ID!, $value: JSON!) {
+                    upsertConfiguration(key: $key, userId: $userId, value: $value) {
+                        key
+                        value
+                    }
+                }
+            `;
+
+            const response = await server.executeOperation(
+                {
+                    query: mutation,
+                    variables: {
+                        key: 'theme',
+                        userId: 'user123',
+                        value: { mode: 'dark' },
+                    },
+                },
+                {
+                    contextValue: contextMiddleware({
+                        headers: { authorization: authorizationToken },
+                    } as any),
+                }
+            );
+
+            expect(response.body.kind).toBe('single');
+            if (response.body.kind === 'single') {
+                expect(response.body.singleResult.errors).toBeDefined();
+                expect(response.body.singleResult.errors?.[0].message).toContain('Unauthorized');
+                expect(response.body.singleResult.errors?.[0].extensions?.code).toBe('UNAUTHORIZED');
             }
         });
 

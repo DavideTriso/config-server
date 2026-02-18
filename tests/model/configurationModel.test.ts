@@ -11,7 +11,7 @@ import { ValidationError } from 'apollo-server-core';
 describe('ConfigurationModel', () => {
     let mongoServer: MongoMemoryServer;
     let validAuthToken: string;
-    let validTokenKey: string;
+    let validTokenName: string;
     const originalAppSecret = process.env.APP_SECRET;
 
     beforeAll(async () => {
@@ -34,7 +34,7 @@ describe('ConfigurationModel', () => {
         // Create a valid token for tests
         const tokenResult = await TokenModel.create({ name: 'test-token' });
         validAuthToken = tokenResult.authorizationToken;
-        validTokenKey = tokenResult.token.key;
+        validTokenName = tokenResult.token.name;
     });
 
     describe('upsert', () => {
@@ -116,7 +116,7 @@ describe('ConfigurationModel', () => {
                     value: { setting1: 'value1' }
                 };
 
-                await TokenModel.expire({ key: validTokenKey });
+                await TokenModel.expire({ name: validTokenName });
 
                 await expect(
                     ConfigurationModel.upsert(input, true, validAuthToken)
@@ -677,7 +677,7 @@ describe('ConfigurationModel', () => {
             });
 
             it('should throw UnauthorizedError with expired token', async () => {
-                await TokenModel.expire({ key: validTokenKey });
+                await TokenModel.expire({ name: validTokenName });
 
                 await expect(
                     ConfigurationModel.findByUserIdAndKeys(
@@ -949,7 +949,7 @@ describe('ConfigurationModel', () => {
             );
 
             // Expire the token
-            await TokenModel.expire({ key: validTokenKey });
+            await TokenModel.expire({ name: validTokenName });
 
             // Operations requiring authorization should fail
             await expect(
