@@ -18,7 +18,7 @@ const resolvers = {
                 return await ConfigurationModel.findByUserIdAndKeys(
                     { userId: args.userId, keys: args.keys },
                     true,
-                    context.token
+                    context.authorizationToken
                 );
             } catch (error) {
                 handleError(error);
@@ -37,7 +37,7 @@ const resolvers = {
                     .upsert(
                         { key: args.key, userId: args.userId, value: args.value },
                         true,
-                        context.token
+                        context.authorizationToken
                     );
             } catch (error) {
                 handleError(error);

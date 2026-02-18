@@ -6,7 +6,7 @@ export default class TokenValidator {
     private static readonly nameValidationRule = z
         .string()
         .min(3, 'Name must be at least 3 characters long')
-        .max(200, 'Name must not exceed 200 characters')
+        .max(30, 'Name must not exceed 30 characters')
         .regex(
             /^[a-zA-Z0-9@_/\\|&.:#$\[\]{}()\-]+$/,
             'Name can only contain alphanumeric characters and the following special characters: @ _ - / \\ | & . : # $ [ ] { } ( )'

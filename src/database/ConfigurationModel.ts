@@ -10,8 +10,8 @@ const configurationSchema = new Schema<ConfigurationInterface, ConfigurationMode
         value: { type: Schema.Types.Mixed, required: true },
         createdOnDateTime: { type: Schema.Types.Date, required: true },
         createdBy: { type: String, required: true },
-        updatedOnDateTime: { type: Schema.Types.Date },
-        updatedBy: { type: String }
+        lastUpdatedOnDateTime: { type: Schema.Types.Date },
+        lastUpdatedBy: { type: String }
     },
     { collection: 'Configurations' }
 );

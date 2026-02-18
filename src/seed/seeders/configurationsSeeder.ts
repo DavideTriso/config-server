@@ -1,6 +1,7 @@
 import { faker } from '@faker-js/faker';
 import UpsertConfigurationInputInterface from "../../model/types/UpsertConfigurationInputInterface";
 import ConfigurationModel from '../../model/ConfigurationModel';
+import Users from '../../model/constants/Users';
 
 function generateRandomValue(): string | boolean | number | string[] {
     const valueType = faker.helpers.arrayElement([1, 2, 3, 4]);
@@ -17,7 +18,7 @@ function generateRandomValue(): string | boolean | number | string[] {
 }
 
 function generateRandomValueObj(nestingLevel: number = 0): Record<string, string | boolean | number | string[] | object> {
-    const propsCount = faker.number.int({ min: 1, max: 50 });
+    const propsCount = faker.number.int({ min: 1, max: 25 });
     const keysArray = Array.from({ length: propsCount }, () => faker.string.alpha({ length: { min: 5, max: 20 } }));
 
     const obj: Record<string, string | boolean | number | string[] | object> = {};
@@ -47,13 +48,13 @@ function generateUpsertConfigurationInputs(count: number): UpsertConfigurationIn
 }
 
 export default async function seedConfigurations(): Promise<void> {
-    await ConfigurationModel.deleteAll(false);
+    await ConfigurationModel.deleteAll(true);
 
-    const upsertConfigurationInputs = generateUpsertConfigurationInputs(1000);
+    const upsertConfigurationInputs = generateUpsertConfigurationInputs(5000);
 
     await Promise.all(
         upsertConfigurationInputs.map(async (upsertConfigurationInput) => {
-            await ConfigurationModel.upsert(upsertConfigurationInput, false, 'seeder');
+            await ConfigurationModel.upsert(upsertConfigurationInput, false);
         })
     );
 }

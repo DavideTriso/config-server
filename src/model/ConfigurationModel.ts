@@ -2,47 +2,50 @@ import ConfigurationInterface from "../database/types/ConfigurationInterface";
 import UpsertConfigurationInputInterface from "./types/UpsertConfigurationInputInterface";
 import { ConfigurationModel as DatabaseConfigurationModel } from "../database/ConfigurationModel";
 import TokenModel from "./TokenModel";
-import { z } from 'zod';
-import ConfiguratioValidator from "./validators/ConfiguratioValidator";
-
+import ConfigurationValidator from "./validators/ConfigurationValidator";
+import Users from "./constants/Users";
+import InternalServerError from "./errors/InternalServerError";
 
 export default class ConfigurationModel {
+
     public static async upsert(
         input: UpsertConfigurationInputInterface,
         checkAuthorization: boolean = true,
-        token: string | null = null
+        authorizationToken: string | null = null
     ): Promise<ConfigurationInterface | null> {
         if (checkAuthorization) {
-            await TokenModel.checkAuthorization(token, false);
+            await TokenModel.checkAuthorization(authorizationToken);
         }
 
-        ConfiguratioValidator.validateUpsertInput(input);
+        ConfigurationValidator.validateUpsertInput(input);
 
         const now = new Date();
-        const _input = {
-            ...input,
-            updatedOnDateTime: now,
-            updatedBy: token ?? 'anonymous'
-        }
+        const userName = authorizationToken
+            ? (TokenModel.getNameFromAuthorizationToken(authorizationToken) ?? Users.ANONYMOUS)
+            : Users.ANONYMOUS;
 
         return DatabaseConfigurationModel
             .findOneAndUpdate(
                 { key: input.key, userId: input.userId },
                 {
-                    $set: _input,
-                    $setOnInsert: { createdOnDateTime: now, createdBy: token ?? 'anonymous' }
+                    $set: {
+                        ...input,
+                        lastUpdatedOnDateTime: now,
+                        lastUpdatedBy: userName
+                    },
+                    $setOnInsert: {
+                        createdOnDateTime: now,
+                        createdBy: userName
+                    }
                 },
                 { upsert: true, returnDocument: 'after' }
             )
             .lean<ConfigurationInterface>();
     }
 
-    public static async deleteAll(
-        checkAuthorization: boolean = true,
-        token: string | null = null
-    ): Promise<void> {
-        if (checkAuthorization) {
-            await TokenModel.checkAuthorization(token, false);
+    public static async deleteAll(iAmAwareThisIsAnInternalMethod: boolean): Promise<void> {
+        if (!iAmAwareThisIsAnInternalMethod) {
+            throw new InternalServerError("This method is internal.");
         }
 
         await DatabaseConfigurationModel.deleteMany({});
@@ -51,14 +54,17 @@ export default class ConfigurationModel {
     public static async findByUserIdAndKeys(
         filters: { userId: string, keys?: string[] },
         checkAuthorization: boolean = true,
-        token: string | null = null
+        authorizationToken: string | null = null
     ): Promise<ConfigurationInterface[]> {
         if (checkAuthorization) {
-            await TokenModel.checkAuthorization(token, false);
+            await TokenModel.checkAuthorization(authorizationToken);
         }
 
         return await DatabaseConfigurationModel
-            .find({ userId: filters.userId, ...(filters.keys ? { key: { $in: filters.keys } } : {}) })
+            .find({
+                userId: filters.userId,
+                ...(filters.keys && filters.keys.length > 0 ? { key: { $in: filters.keys } } : {})
+            })
             .lean<ConfigurationInterface[]>();
     }
 }

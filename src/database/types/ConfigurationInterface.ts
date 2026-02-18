@@ -7,6 +7,6 @@ export default interface ConfigurationInterface {
     value: object | [];
     createdOnDateTime: Date;
     createdBy: string;
-    updatedOnDateTime: Date;
-    updatedBy: string;
+    lastUpdatedOnDateTime: Date;
+    lastUpdatedBy: string;
 }

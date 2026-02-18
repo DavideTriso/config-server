@@ -8,7 +8,7 @@ const typeDefs = gql`
     userId: String!
     value: JSON!
     createdOnDateTime: String
-    updatedOnDateTime: String
+    lastUpdatedOnDateTime: String
   }
 
   type Query {

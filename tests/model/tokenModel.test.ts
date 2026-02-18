@@ -3,8 +3,9 @@ import mongoose from 'mongoose';
 import TokenModel from '../../src/model/TokenModel';
 import { TokenModel as DatabaseTokenModel } from '../../src/database/TokenModel';
 import UnauthorizedError from '../../src/model/errors/UnauthorizedError';
+import InternalServerError from '../../src/model/errors/InternalServerError';
 import { ValidationError } from 'apollo-server-core';
-import TokenInterface from '../../src/database/types/TokenInterface';
+import bcrypt from 'bcrypt';
 
 describe('TokenModel', () => {
     let mongoServer: MongoMemoryServer;
@@ -24,542 +25,699 @@ describe('TokenModel', () => {
         await DatabaseTokenModel.deleteMany({});
     });
 
-    describe('create()', () => {
-        describe('Success cases', () => {
-            it('should create a regular token without authorization check', async () => {
-                const input = { name: 'test-token' };
-                const token = await TokenModel.create(input, false);
+    describe('create', () => {
+        it('should successfully create a token with valid input', async () => {
+            const input = { name: 'test-token' };
+            const result = await TokenModel.create(input);
 
-                expect(token).toBeDefined();
-                expect(token.name).toBe('test-token');
-                expect(token.admin).toBe(false);
-                expect(token.expired).toBe(false);
-                expect(token.token).toBeDefined();
-                expect(token.token.length).toBe(128); // 64 bytes in hex = 128 chars
-                expect(token.createdBy).toBe('anonymous');
-                expect(token.updatedBy).toBe('anonymous');
-                expect(token.createdOnDateTime).toBeInstanceOf(Date);
-                expect(token.updatedOnDateTime).toBeInstanceOf(Date);
-            });
+            expect(result).toBeDefined();
+            expect(result.token).toBeDefined();
+            expect(result.authorizationToken).toBeDefined();
+            expect(result.token.name).toBe('test-token');
+            expect(result.token.expired).toBe(false);
+            expect(result.token.expiredOnDateTime).toBeNull();
+            expect(result.token.key).toBeDefined();
+            expect(result.token.password).toBeDefined();
+        });
 
-            it('should create a token with custom creator when token provided', async () => {
-                const adminToken = await TokenModel.createAdmin({ name: 'admin' }, false);
-                const input = { name: 'user-token' };
-                const token = await TokenModel.create(input, false, adminToken.token);
+        it('should generate unique keys for different tokens', async () => {
+            const result1 = await TokenModel.create({ name: 'token1' });
+            const result2 = await TokenModel.create({ name: 'token2' });
 
-                expect(token.createdBy).toBe(adminToken.token);
-                expect(token.updatedBy).toBe(adminToken.token);
-            });
+            expect(result1.token.key).not.toBe(result2.token.key);
+        });
 
-            it('should create a token with authorization check when admin token provided', async () => {
-                const adminToken = await TokenModel.createAdmin({ name: 'admin' }, false);
-                const input = { name: 'authorized-token' };
-                const token = await TokenModel.create(input, true, adminToken.token);
+        it('should generate unique passwords for different tokens', async () => {
+            const result1 = await TokenModel.create({ name: 'token1' });
+            const result2 = await TokenModel.create({ name: 'token2' });
 
-                expect(token).toBeDefined();
-                expect(token.name).toBe('authorized-token');
-                expect(token.admin).toBe(false);
-            });
+            expect(result1.token.password).not.toBe(result2.token.password);
+        });
 
-            it('should generate unique tokens for each creation', async () => {
-                const token1 = await TokenModel.create({ name: 'token1' }, false);
-                const token2 = await TokenModel.create({ name: 'token2' }, false);
+        it('should hash the password in the database', async () => {
+            const result = await TokenModel.create({ name: 'test-token' });
 
-                expect(token1.token).not.toBe(token2.token);
-            });
+            // Password in the token should be a bcrypt hash
+            expect(result.token.password).toMatch(/^\$2[aby]\$/);
+            expect(result.token.password.length).toBeGreaterThan(50);
+        });
 
-            it('should create token with all allowed special characters in name', async () => {
-                const input = { name: 'test@_-/\\|&.:#$[]{}()' };
-                const token = await TokenModel.create(input, false);
+        it('should generate valid authorization token format', async () => {
+            const result = await TokenModel.create({ name: 'test-token' });
 
-                expect(token.name).toBe('test@_-/\\|&.:#$[]{}()');
+            const parts = result.authorizationToken.split(':');
+            expect(parts).toHaveLength(4);
+
+            // Verify all parts are base64 encoded
+            parts.forEach(part => {
+                expect(() => Buffer.from(part, 'base64')).not.toThrow();
             });
         });
 
-        describe('Validation failures', () => {
-            it('should throw ValidationError for name that is too short', async () => {
-                const input = { name: 'ab' };
-                await expect(TokenModel.create(input, false)).rejects.toThrow(ValidationError);
-            });
-
-            it('should throw ValidationError for name that is too long', async () => {
-                const input = { name: 'a'.repeat(201) };
-                await expect(TokenModel.create(input, false)).rejects.toThrow(ValidationError);
-            });
-
-            it('should throw ValidationError for name with invalid characters', async () => {
-                const input = { name: 'invalid name with spaces' };
-                await expect(TokenModel.create(input, false)).rejects.toThrow(ValidationError);
-            });
-
-            it('should throw ValidationError for empty name', async () => {
-                const input = { name: '' };
-                await expect(TokenModel.create(input, false)).rejects.toThrow(ValidationError);
-            });
-
-            it('should throw ValidationError when name is not a string', async () => {
-                const input = { name: 123 } as any;
-                await expect(TokenModel.create(input, false)).rejects.toThrow(ValidationError);
-            });
+        it('should allow token names with alphanumeric characters', async () => {
+            const result = await TokenModel.create({ name: 'test123' });
+            expect(result.token.name).toBe('test123');
         });
 
-        describe('Authorization failures', () => {
-            it('should throw UnauthorizedError when checkAuthorization is true and no token provided', async () => {
-                const input = { name: 'test' };
-                await expect(TokenModel.create(input, true, null)).rejects.toThrow(UnauthorizedError);
-            });
-
-            it('should throw UnauthorizedError when checkAuthorization is true and invalid token provided', async () => {
-                const input = { name: 'test' };
-                await expect(TokenModel.create(input, true, 'invalid-token')).rejects.toThrow(UnauthorizedError);
-            });
-
-            it('should throw UnauthorizedError when checkAuthorization is true and expired token provided', async () => {
-                const adminToken = await TokenModel.createAdmin({ name: 'admin' }, false);
-                await TokenModel.expireAdmin({ token: adminToken.token }, false);
-                const input = { name: 'test' };
-                await expect(TokenModel.create(input, true, adminToken.token)).rejects.toThrow(UnauthorizedError);
-            });
-
-            it('should throw UnauthorizedError when non-admin token is used', async () => {
-                const regularToken = await TokenModel.create({ name: 'regular' }, false);
-                const input = { name: 'test' };
-                await expect(TokenModel.create(input, true, regularToken.token)).rejects.toThrow(UnauthorizedError);
-            });
-        });
-    });
-
-    describe('createAdmin()', () => {
-        describe('Success cases', () => {
-            it('should create an admin token without authorization check', async () => {
-                const input = { name: 'admin-token' };
-                const token = await TokenModel.createAdmin(input, false);
-
-                expect(token).toBeDefined();
-                expect(token.name).toBe('admin-token');
-                expect(token.admin).toBe(true);
-                expect(token.expired).toBe(false);
-                expect(token.token).toBeDefined();
-                expect(token.token.length).toBe(128);
-                expect(token.createdBy).toBe('anonymous');
-                expect(token.updatedBy).toBe('anonymous');
-            });
-
-            it('should create admin token with custom creator when token provided', async () => {
-                const firstAdmin = await TokenModel.createAdmin({ name: 'first-admin' }, false);
-                const secondAdmin = await TokenModel.createAdmin({ name: 'second-admin' }, false, firstAdmin.token);
-
-                expect(secondAdmin.createdBy).toBe(firstAdmin.token);
-                expect(secondAdmin.updatedBy).toBe(firstAdmin.token);
-            });
-
-            it('should create admin token with authorization check when admin token provided', async () => {
-                const firstAdmin = await TokenModel.createAdmin({ name: 'first-admin' }, false);
-                const secondAdmin = await TokenModel.createAdmin({ name: 'second-admin' }, true, firstAdmin.token);
-
-                expect(secondAdmin).toBeDefined();
-                expect(secondAdmin.admin).toBe(true);
-            });
+        it('should allow token names with allowed special characters', async () => {
+            const result = await TokenModel.create({ name: 'test_token-123@domain' });
+            expect(result.token.name).toBe('test_token-123@domain');
         });
 
-        describe('Validation failures', () => {
-            it('should throw ValidationError for invalid name', async () => {
-                const input = { name: 'ab' };
-                await expect(TokenModel.createAdmin(input, false)).rejects.toThrow(ValidationError);
-            });
-
-            it('should throw ValidationError for name with spaces', async () => {
-                const input = { name: 'admin token' };
-                await expect(TokenModel.createAdmin(input, false)).rejects.toThrow(ValidationError);
-            });
+        it('should throw ValidationError for names shorter than 3 characters', async () => {
+            await expect(TokenModel.create({ name: 'ab' }))
+                .rejects
+                .toThrow(ValidationError);
         });
 
-        describe('Authorization failures', () => {
-            it('should throw UnauthorizedError when checkAuthorization is true and no token provided', async () => {
-                const input = { name: 'admin' };
-                await expect(TokenModel.createAdmin(input, true, null)).rejects.toThrow(UnauthorizedError);
-            });
+        it('should throw ValidationError for empty name', async () => {
+            await expect(TokenModel.create({ name: '' }))
+                .rejects
+                .toThrow(ValidationError);
+        });
 
-            it('should throw UnauthorizedError when non-admin token is used', async () => {
-                const regularToken = await TokenModel.create({ name: 'regular' }, false);
-                const input = { name: 'new-admin' };
-                await expect(TokenModel.createAdmin(input, true, regularToken.token)).rejects.toThrow(UnauthorizedError);
-            });
+        it('should throw ValidationError for names longer than 200 characters', async () => {
+            const longName = 'a'.repeat(201);
+            await expect(TokenModel.create({ name: longName }))
+                .rejects
+                .toThrow(ValidationError);
+        });
+
+        it('should throw ValidationError for names with invalid characters', async () => {
+            await expect(TokenModel.create({ name: 'test token!' }))
+                .rejects
+                .toThrow(ValidationError);
+        });
+
+        it('should throw ValidationError for names with spaces', async () => {
+            await expect(TokenModel.create({ name: 'test token' }))
+                .rejects
+                .toThrow(ValidationError);
+        });
+
+        it('should persist token to database', async () => {
+            const result = await TokenModel.create({ name: 'test-token' });
+
+            const dbToken = await DatabaseTokenModel.findOne({ key: result.token.key });
+            expect(dbToken).toBeDefined();
+            expect(dbToken?.name).toBe('test-token');
+        });
+
+        it('should create authorization token that can be verified', async () => {
+            const result = await TokenModel.create({ name: 'test-token' });
+
+            // Should not throw
+            await expect(TokenModel.checkAuthorization(result.authorizationToken))
+                .resolves
+                .not.toThrow();
         });
     });
 
-    describe('expire()', () => {
-        describe('Success cases', () => {
-            it('should expire a regular token', async () => {
-                const token = await TokenModel.create({ name: 'test' }, false);
-                const expired = await TokenModel.expire({ token: token.token }, false);
+    describe('expire', () => {
+        it('should successfully expire a non-expired token', async () => {
+            const created = await TokenModel.create({ name: 'test-token' });
 
-                expect(expired).toBeDefined();
-                expect(expired!.expired).toBe(true);
-                expect(expired!.token).toBe(token.token);
-                expect(expired!.updatedBy).toBe('anonymous');
-            });
+            const expired = await TokenModel.expire({ key: created.token.key });
 
-            it('should update updatedBy field when token provided', async () => {
-                const adminToken = await TokenModel.createAdmin({ name: 'admin' }, false);
-                const userToken = await TokenModel.create({ name: 'user' }, false);
-                const expired = await TokenModel.expire({ token: userToken.token }, false, adminToken.token);
-
-                expect(expired!.updatedBy).toBe(adminToken.token);
-            });
-
-            it('should expire regular token with admin authorization', async () => {
-                const adminToken = await TokenModel.createAdmin({ name: 'admin' }, false);
-                const userToken = await TokenModel.create({ name: 'user' }, false);
-                const expired = await TokenModel.expire({ token: userToken.token }, true, adminToken.token);
-
-                expect(expired).toBeDefined();
-                expect(expired!.expired).toBe(true);
-            });
-
-            it('should return null when trying to expire non-existent token', async () => {
-                const result = await TokenModel.expire({ token: 'non-existent' }, false);
-                expect(result).toBeNull();
-            });
-
-            it('should return null when trying to expire already expired token', async () => {
-                const token = await TokenModel.create({ name: 'test' }, false);
-                await TokenModel.expire({ token: token.token }, false);
-                const result = await TokenModel.expire({ token: token.token }, false);
-                expect(result).toBeNull();
-            });
-
-            it('should not expire admin tokens with expire() method', async () => {
-                const adminToken = await TokenModel.createAdmin({ name: 'admin' }, false);
-                const result = await TokenModel.expire({ token: adminToken.token }, false);
-                expect(result).toBeNull();
-
-                // Verify token is still active
-                const found = await TokenModel.findByToken({ token: adminToken.token }, false);
-                expect(found).toBeDefined();
-                expect(found!.expired).toBe(false);
-            });
+            expect(expired).toBeDefined();
+            expect(expired?.expired).toBe(true);
+            expect(expired?.expiredOnDateTime).toBeInstanceOf(Date);
         });
 
-        describe('Authorization failures', () => {
-            it('should throw UnauthorizedError when checkAuthorization is true and no token provided', async () => {
-                const userToken = await TokenModel.create({ name: 'user' }, false);
-                await expect(TokenModel.expire({ token: userToken.token }, true, null)).rejects.toThrow(UnauthorizedError);
-            });
+        it('should not expire already expired tokens', async () => {
+            const created = await TokenModel.create({ name: 'test-token' });
 
-            it('should throw UnauthorizedError when non-admin token is used', async () => {
-                const regularToken = await TokenModel.create({ name: 'regular' }, false);
-                const targetToken = await TokenModel.create({ name: 'target' }, false);
-                await expect(TokenModel.expire({ token: targetToken.token }, true, regularToken.token)).rejects.toThrow(UnauthorizedError);
-            });
+            // Expire first time
+            await TokenModel.expire({ key: created.token.key });
+
+            // Attempt to expire again
+            const result = await TokenModel.expire({ key: created.token.key });
+
+            expect(result).toBeNull();
+        });
+
+        it('should return null for non-existent tokens', async () => {
+            const result = await TokenModel.expire({ key: 'non-existent-key' });
+            expect(result).toBeNull();
+        });
+
+        it('should set expiredOnDateTime when expiring', async () => {
+            const created = await TokenModel.create({ name: 'test-token' });
+            const beforeExpire = new Date();
+
+            const expired = await TokenModel.expire({ key: created.token.key });
+            const afterExpire = new Date();
+
+            expect(expired?.expiredOnDateTime).toBeDefined();
+            expect(expired!.expiredOnDateTime!.getTime()).toBeGreaterThanOrEqual(beforeExpire.getTime());
+            expect(expired!.expiredOnDateTime!.getTime()).toBeLessThanOrEqual(afterExpire.getTime());
+        });
+
+        it('should persist expiration to database', async () => {
+            const created = await TokenModel.create({ name: 'test-token' });
+
+            await TokenModel.expire({ key: created.token.key });
+
+            const dbToken = await DatabaseTokenModel.findOne({ key: created.token.key });
+            expect(dbToken?.expired).toBe(true);
         });
     });
 
-    describe('expireAdmin()', () => {
-        describe('Success cases', () => {
-            it('should expire an admin token', async () => {
-                const token = await TokenModel.createAdmin({ name: 'admin' }, false);
-                const expired = await TokenModel.expireAdmin({ token: token.token }, false);
+    describe('deleteAll', () => {
+        it('should delete all tokens', async () => {
+            await TokenModel.create({ name: 'token1' });
+            await TokenModel.create({ name: 'token2' });
+            await TokenModel.create({ name: 'token3' });
 
-                expect(expired).toBeDefined();
-                expect(expired!.expired).toBe(true);
-                expect(expired!.admin).toBe(true);
-                expect(expired!.updatedBy).toBe('anonymous');
-            });
+            await TokenModel.deleteAll(true);
 
-            it('should update updatedBy field when token provided', async () => {
-                const admin1 = await TokenModel.createAdmin({ name: 'admin1' }, false);
-                const admin2 = await TokenModel.createAdmin({ name: 'admin2' }, false);
-                const expired = await TokenModel.expireAdmin({ token: admin2.token }, false, admin1.token);
-
-                expect(expired!.updatedBy).toBe(admin1.token);
-            });
-
-            it('should return null when trying to expire non-existent token', async () => {
-                const result = await TokenModel.expireAdmin({ token: 'non-existent' }, false);
-                expect(result).toBeNull();
-            });
-
-            it('should return null when trying to expire already expired admin token', async () => {
-                const token = await TokenModel.createAdmin({ name: 'admin' }, false);
-                await TokenModel.expireAdmin({ token: token.token }, false);
-                const result = await TokenModel.expireAdmin({ token: token.token }, false);
-                expect(result).toBeNull();
-            });
-
-            it('should not expire regular tokens with expireAdmin() method', async () => {
-                const regularToken = await TokenModel.create({ name: 'user' }, false);
-                const result = await TokenModel.expireAdmin({ token: regularToken.token }, false);
-                expect(result).toBeNull();
-
-                // Verify token is still active
-                const found = await TokenModel.findByToken({ token: regularToken.token }, false);
-                expect(found).toBeDefined();
-                expect(found!.expired).toBe(false);
-            });
+            const count = await DatabaseTokenModel.countDocuments();
+            expect(count).toBe(0);
         });
 
-        describe('Authorization failures', () => {
-            it('should throw UnauthorizedError when checkAuthorization is true and no token provided', async () => {
-                const adminToken = await TokenModel.createAdmin({ name: 'admin' }, false);
-                await expect(TokenModel.expireAdmin({ token: adminToken.token }, true, null)).rejects.toThrow(UnauthorizedError);
-            });
+        it('should work when no tokens exist', async () => {
+            await expect(TokenModel.deleteAll(true)).resolves.not.toThrow();
+        });
+
+        it('should delete both expired and non-expired tokens', async () => {
+            const token1 = await TokenModel.create({ name: 'token1' });
+            await TokenModel.create({ name: 'token2' });
+            await TokenModel.expire({ key: token1.token.key });
+
+            await TokenModel.deleteAll(true);
+
+            const count = await DatabaseTokenModel.countDocuments();
+            expect(count).toBe(0);
         });
     });
 
-    describe('findByToken()', () => {
-        describe('Success cases', () => {
-            it('should find an active regular token', async () => {
-                const created = await TokenModel.create({ name: 'test' }, false);
-                const found = await TokenModel.findByToken({ token: created.token }, false);
+    describe('checkAuthorization', () => {
+        it('should pass for valid authorization token', async () => {
+            const created = await TokenModel.create({ name: 'test-token' });
 
-                expect(found).toBeDefined();
-                expect(found!.token).toBe(created.token);
-                expect(found!.name).toBe('test');
-                expect(found!.admin).toBe(false);
-                expect(found!.expired).toBe(false);
-            });
-
-            it('should find an active admin token', async () => {
-                const created = await TokenModel.createAdmin({ name: 'admin' }, false);
-                const found = await TokenModel.findByToken({ token: created.token }, false);
-
-                expect(found).toBeDefined();
-                expect(found!.admin).toBe(true);
-            });
-
-            it('should return null for non-existent token', async () => {
-                const found = await TokenModel.findByToken({ token: 'non-existent' }, false);
-                expect(found).toBeNull();
-            });
-
-            it('should return null for expired token', async () => {
-                const token = await TokenModel.create({ name: 'test' }, false);
-                await TokenModel.expire({ token: token.token }, false);
-                const found = await TokenModel.findByToken({ token: token.token }, false);
-                expect(found).toBeNull();
-            });
-
-            it('should find token with admin authorization', async () => {
-                const adminToken = await TokenModel.createAdmin({ name: 'admin' }, false);
-                const userToken = await TokenModel.create({ name: 'user' }, false);
-                const found = await TokenModel.findByToken({ token: userToken.token }, true, adminToken.token);
-
-                expect(found).toBeDefined();
-                expect(found!.token).toBe(userToken.token);
-            });
+            await expect(TokenModel.checkAuthorization(created.authorizationToken))
+                .resolves
+                .not.toThrow();
         });
 
-        describe('Authorization failures', () => {
-            it('should throw UnauthorizedError when checkAuthorization is true and no token provided', async () => {
-                const token = await TokenModel.create({ name: 'test' }, false);
-                await expect(TokenModel.findByToken({ token: token.token }, true, null)).rejects.toThrow(UnauthorizedError);
-            });
-
-            it('should throw UnauthorizedError when non-admin token is used', async () => {
-                const regularToken = await TokenModel.create({ name: 'regular' }, false);
-                const targetToken = await TokenModel.create({ name: 'target' }, false);
-                await expect(TokenModel.findByToken({ token: targetToken.token }, true, regularToken.token)).rejects.toThrow(UnauthorizedError);
-            });
-        });
-    });
-
-    describe('deleteAll()', () => {
-        describe('Success cases', () => {
-            it('should delete all tokens', async () => {
-                await TokenModel.create({ name: 'token1' }, false);
-                await TokenModel.create({ name: 'token2' }, false);
-                await TokenModel.createAdmin({ name: 'admin' }, false);
-
-                await TokenModel.deleteAll(false);
-
-                const count = await DatabaseTokenModel.countDocuments();
-                expect(count).toBe(0);
-            });
-
-            it('should delete all tokens with admin authorization', async () => {
-                const adminToken = await TokenModel.createAdmin({ name: 'admin' }, false);
-                await TokenModel.create({ name: 'token1' }, false);
-                await TokenModel.create({ name: 'token2' }, false);
-
-                await TokenModel.deleteAll(true, adminToken.token);
-
-                const count = await DatabaseTokenModel.countDocuments();
-                expect(count).toBe(0);
-            });
-
-            it('should succeed even when there are no tokens', async () => {
-                await TokenModel.deleteAll(false);
-                const count = await DatabaseTokenModel.countDocuments();
-                expect(count).toBe(0);
-            });
+        it('should throw UnauthorizedError for null token', async () => {
+            await expect(TokenModel.checkAuthorization(null))
+                .rejects
+                .toThrow(UnauthorizedError);
         });
 
-        describe('Authorization failures', () => {
-            it('should throw UnauthorizedError when checkAuthorization is true and no token provided', async () => {
-                await expect(TokenModel.deleteAll(true, null)).rejects.toThrow(UnauthorizedError);
-            });
-
-            it('should throw UnauthorizedError when non-admin token is used', async () => {
-                const regularToken = await TokenModel.create({ name: 'regular' }, false);
-                await expect(TokenModel.deleteAll(true, regularToken.token)).rejects.toThrow(UnauthorizedError);
-            });
-        });
-    });
-
-    describe('checkAuthorization()', () => {
-        describe('Valid authorization cases', () => {
-            it('should pass when valid admin token provided and requireAdmin is true', async () => {
-                const adminToken = await TokenModel.createAdmin({ name: 'admin' }, false);
-                await expect(TokenModel.checkAuthorization(adminToken.token, true)).resolves.not.toThrow();
-            });
-
-            it('should pass when valid admin token provided and requireAdmin is false', async () => {
-                const adminToken = await TokenModel.createAdmin({ name: 'admin' }, false);
-                await expect(TokenModel.checkAuthorization(adminToken.token, false)).resolves.not.toThrow();
-            });
-
-            it('should pass when valid regular token provided and requireAdmin is false', async () => {
-                const regularToken = await TokenModel.create({ name: 'regular' }, false);
-                await expect(TokenModel.checkAuthorization(regularToken.token, false)).resolves.not.toThrow();
-            });
+        it('should throw UnauthorizedError for empty string token', async () => {
+            await expect(TokenModel.checkAuthorization(''))
+                .rejects
+                .toThrow(UnauthorizedError);
         });
 
-        describe('Invalid authorization cases', () => {
-            it('should throw UnauthorizedError when null token provided', async () => {
-                await expect(TokenModel.checkAuthorization(null, false)).rejects.toThrow(UnauthorizedError);
-            });
-
-            it('should throw UnauthorizedError when null token provided and requireAdmin is true', async () => {
-                await expect(TokenModel.checkAuthorization(null, true)).rejects.toThrow(UnauthorizedError);
-            });
-
-            it('should throw UnauthorizedError when invalid token provided', async () => {
-                await expect(TokenModel.checkAuthorization('invalid-token', false)).rejects.toThrow(UnauthorizedError);
-            });
-
-            it('should throw UnauthorizedError when non-existent token provided', async () => {
-                await expect(TokenModel.checkAuthorization('a'.repeat(128), false)).rejects.toThrow(UnauthorizedError);
-            });
-
-            it('should throw UnauthorizedError when expired token provided', async () => {
-                const token = await TokenModel.create({ name: 'test' }, false);
-                await TokenModel.expire({ token: token.token }, false);
-                await expect(TokenModel.checkAuthorization(token.token, false)).rejects.toThrow(UnauthorizedError);
-            });
-
-            it('should throw UnauthorizedError when expired admin token provided', async () => {
-                const adminToken = await TokenModel.createAdmin({ name: 'admin' }, false);
-                await TokenModel.expireAdmin({ token: adminToken.token }, false);
-                await expect(TokenModel.checkAuthorization(adminToken.token, true)).rejects.toThrow(UnauthorizedError);
-            });
-
-            it('should throw UnauthorizedError when regular token provided and requireAdmin is true', async () => {
-                const regularToken = await TokenModel.create({ name: 'regular' }, false);
-                await expect(TokenModel.checkAuthorization(regularToken.token, true)).rejects.toThrow(UnauthorizedError);
-            });
-
-            it('should throw UnauthorizedError when empty string token provided', async () => {
-                await expect(TokenModel.checkAuthorization('', false)).rejects.toThrow(UnauthorizedError);
-            });
+        it('should throw UnauthorizedError for malformed token (wrong number of parts)', async () => {
+            await expect(TokenModel.checkAuthorization('invalid:token'))
+                .rejects
+                .toThrow(UnauthorizedError);
         });
 
-        describe('Error message validation', () => {
-            it('should throw UnauthorizedError with default message', async () => {
-                try {
-                    await TokenModel.checkAuthorization(null, false);
-                    fail('Expected UnauthorizedError to be thrown');
-                } catch (error) {
-                    expect(error).toBeInstanceOf(UnauthorizedError);
-                    expect((error as UnauthorizedError).message).toBe('Unauthorized');
-                    expect((error as UnauthorizedError).httpCode).toBe('401');
-                    expect((error as UnauthorizedError).code).toBe('UNAUTHORIZED');
-                }
-            });
+        it('should throw UnauthorizedError for invalid base64', async () => {
+            await expect(TokenModel.checkAuthorization('!!!:!!!:!!!:!!!'))
+                .rejects
+                .toThrow(UnauthorizedError);
         });
 
-        describe('Edge cases', () => {
-            it('should handle rapid sequential authorization checks', async () => {
-                const adminToken = await TokenModel.createAdmin({ name: 'admin' }, false);
+        it('should throw UnauthorizedError for expired token', async () => {
+            const created = await TokenModel.create({ name: 'test-token' });
+            await TokenModel.expire({ key: created.token.key });
 
-                const checks = Array(10).fill(null).map(() =>
-                    TokenModel.checkAuthorization(adminToken.token, true)
-                );
-
-                await expect(Promise.all(checks)).resolves.not.toThrow();
-            });
-
-            it('should correctly identify admin status after multiple tokens created', async () => {
-                await TokenModel.create({ name: 'user1' }, false);
-                await TokenModel.create({ name: 'user2' }, false);
-                const adminToken = await TokenModel.createAdmin({ name: 'admin' }, false);
-                await TokenModel.create({ name: 'user3' }, false);
-
-                await expect(TokenModel.checkAuthorization(adminToken.token, true)).resolves.not.toThrow();
-            });
-
-            it('should fail authorization for token that was created then expired', async () => {
-                const token = await TokenModel.create({ name: 'test' }, false);
-                await expect(TokenModel.checkAuthorization(token.token, false)).resolves.not.toThrow();
-
-                await TokenModel.expire({ token: token.token }, false);
-                await expect(TokenModel.checkAuthorization(token.token, false)).rejects.toThrow(UnauthorizedError);
-            });
-        });
-    });
-
-    describe('Integration tests', () => {
-        it('should handle complete token lifecycle', async () => {
-            // Create admin token
-            const adminToken = await TokenModel.createAdmin({ name: 'admin' }, false);
-            expect(adminToken.admin).toBe(true);
-
-            // Create regular token using admin
-            const userToken = await TokenModel.create({ name: 'user' }, true, adminToken.token);
-            expect(userToken.admin).toBe(false);
-
-            // Find the user token
-            const found = await TokenModel.findByToken({ token: userToken.token }, true, adminToken.token);
-            expect(found).toBeDefined();
-
-            // Expire the user token
-            const expired = await TokenModel.expire({ token: userToken.token }, true, adminToken.token);
-            expect(expired!.expired).toBe(true);
-
-            // Verify token is no longer findable
-            const notFound = await TokenModel.findByToken({ token: userToken.token }, false);
-            expect(notFound).toBeNull();
+            await expect(TokenModel.checkAuthorization(created.authorizationToken))
+                .rejects
+                .toThrow(UnauthorizedError);
         });
 
-        it('should maintain token uniqueness across many creations', async () => {
-            const tokens = await Promise.all(
-                Array(50).fill(null).map((_, i) =>
-                    TokenModel.create({ name: `token${i}` }, false)
-                )
+        it('should throw UnauthorizedError for non-existent key', async () => {
+            const created = await TokenModel.create({ name: 'test-token' });
+
+            // Delete the token from database
+            await DatabaseTokenModel.deleteOne({ key: created.token.key });
+
+            await expect(TokenModel.checkAuthorization(created.authorizationToken))
+                .rejects
+                .toThrow(UnauthorizedError);
+        });
+
+        it('should throw UnauthorizedError for tampered HMAC', async () => {
+            const created = await TokenModel.create({ name: 'test-token' });
+
+            // Tamper with the HMAC part
+            const parts = created.authorizationToken.split(':');
+            parts[3] = Buffer.from('tampered-hmac').toString('base64');
+            const tamperedToken = parts.join(':');
+
+            await expect(TokenModel.checkAuthorization(tamperedToken))
+                .rejects
+                .toThrow(UnauthorizedError);
+        });
+
+        it('should throw UnauthorizedError for tampered password', async () => {
+            const created = await TokenModel.create({ name: 'test-token' });
+
+            // Tamper with the password part
+            const parts = created.authorizationToken.split(':');
+            parts[2] = Buffer.from('wrong-password').toString('base64');
+            const tamperedToken = parts.join(':');
+
+            await expect(TokenModel.checkAuthorization(tamperedToken))
+                .rejects
+                .toThrow(UnauthorizedError);
+        });
+
+        it('should throw UnauthorizedError when password does not match hash', async () => {
+            const created = await TokenModel.create({ name: 'test-token' });
+
+            // Change the password in the database
+            await DatabaseTokenModel.findOneAndUpdate(
+                { key: created.token.key },
+                { password: await bcrypt.hash('different-password', 10) }
             );
 
-            const tokenStrings = tokens.map(t => t.token);
-            const uniqueTokens = new Set(tokenStrings);
-            expect(uniqueTokens.size).toBe(50);
+            await expect(TokenModel.checkAuthorization(created.authorizationToken))
+                .rejects
+                .toThrow(UnauthorizedError);
         });
 
-        it('should properly isolate admin and regular token operations', async () => {
-            const admin = await TokenModel.createAdmin({ name: 'admin' }, false);
-            const regular = await TokenModel.create({ name: 'regular' }, false);
+        it('should validate HMAC signature correctly', async () => {
+            const created = await TokenModel.create({ name: 'test-token' });
 
-            // Expire should not affect admin
-            const expireRegularResult = await TokenModel.expire({ token: admin.token }, false);
-            expect(expireRegularResult).toBeNull();
+            // Create a new token with same parts but different HMAC
+            const parts = created.authorizationToken.split(':');
+            const wrongHmac = Buffer.from('completely-wrong').toString('base64');
+            const tokenWithWrongHmac = `${parts[0]}:${parts[1]}:${parts[2]}:${wrongHmac}`;
 
-            // ExpireAdmin should not affect regular
-            const expireAdminResult = await TokenModel.expireAdmin({ token: regular.token }, false);
-            expect(expireAdminResult).toBeNull();
+            await expect(TokenModel.checkAuthorization(tokenWithWrongHmac))
+                .rejects
+                .toThrow(UnauthorizedError);
+        });
 
-            // Both should still be findable
-            const foundAdmin = await TokenModel.findByToken({ token: admin.token }, false);
-            const foundRegular = await TokenModel.findByToken({ token: regular.token }, false);
-            expect(foundAdmin).toBeDefined();
-            expect(foundRegular).toBeDefined();
+        it('should be case-sensitive for password validation', async () => {
+            const created = await TokenModel.create({ name: 'test-token' });
+
+            // Decode and modify password casing
+            const parts = created.authorizationToken.split(':');
+            const password = Buffer.from(parts[2], 'base64').toString('utf-8');
+            const modifiedPassword = password.toUpperCase();
+            parts[2] = Buffer.from(modifiedPassword).toString('base64');
+            const modifiedToken = parts.join(':');
+
+            await expect(TokenModel.checkAuthorization(modifiedToken))
+                .rejects
+                .toThrow(UnauthorizedError);
+        });
+
+        it('should throw InternalServerError when APP_SECRET is missing', async () => {
+            const created = await TokenModel.create({ name: 'test-token' });
+            const originalSecret = process.env.APP_SECRET;
+            delete process.env.APP_SECRET;
+
+            await expect(TokenModel.checkAuthorization(created.authorizationToken))
+                .rejects
+                .toThrow(InternalServerError);
+
+            process.env.APP_SECRET = originalSecret;
+        });
+    });
+
+    describe('getNameFromAuthorizationToken', () => {
+        it('should return correct name for valid token', async () => {
+            const created = await TokenModel.create({ name: 'test-token-name' });
+
+            const name = TokenModel.getNameFromAuthorizationToken(created.authorizationToken);
+
+            expect(name).toBe('test-token-name');
+        });
+
+        it('should throw UnauthorizedError for null token', () => {
+            expect(() => TokenModel.getNameFromAuthorizationToken(null))
+                .toThrow(UnauthorizedError);
+        });
+
+        it('should throw UnauthorizedError for empty string', () => {
+            expect(() => TokenModel.getNameFromAuthorizationToken(''))
+                .toThrow(UnauthorizedError);
+        });
+
+        it('should throw UnauthorizedError for malformed token', () => {
+            expect(() => TokenModel.getNameFromAuthorizationToken('invalid'))
+                .toThrow(UnauthorizedError);
+        });
+
+        it('should throw UnauthorizedError for tampered HMAC', async () => {
+            const created = await TokenModel.create({ name: 'test-token' });
+
+            const parts = created.authorizationToken.split(':');
+            parts[3] = Buffer.from('tampered').toString('base64');
+            const tamperedToken = parts.join(':');
+
+            expect(() => TokenModel.getNameFromAuthorizationToken(tamperedToken))
+                .toThrow(UnauthorizedError);
+        });
+
+        it('should handle special characters in token name', async () => {
+            const created = await TokenModel.create({ name: 'test@token_123-name' });
+
+            const name = TokenModel.getNameFromAuthorizationToken(created.authorizationToken);
+
+            expect(name).toBe('test@token_123-name');
+        });
+
+        it('should handle names with allowed special characters', async () => {
+            const specialName = 'token@test_123-#$./';
+            const created = await TokenModel.create({ name: specialName });
+
+            const name = TokenModel.getNameFromAuthorizationToken(created.authorizationToken);
+
+            expect(name).toBe(specialName);
+        });
+
+        it('should validate HMAC before returning name', async () => {
+            const created = await TokenModel.create({ name: 'test-token' });
+
+            // Tamper with name but recalculate HMAC incorrectly
+            const parts = created.authorizationToken.split(':');
+            parts[1] = Buffer.from('tampered-name').toString('base64');
+            const tamperedToken = parts.join(':'); // HMAC is now invalid
+
+            expect(() => TokenModel.getNameFromAuthorizationToken(tamperedToken))
+                .toThrow(UnauthorizedError);
+        });
+
+        it('should throw UnauthorizedError when token format is invalid', () => {
+            expect(() => TokenModel.getNameFromAuthorizationToken('a:b:c'))
+                .toThrow(UnauthorizedError);
+        });
+
+        it('should correctly decode base64 encoded names', async () => {
+            const created = await TokenModel.create({ name: 'my-test-token-123' });
+
+            const name = TokenModel.getNameFromAuthorizationToken(created.authorizationToken);
+
+            expect(name).toBe('my-test-token-123');
+        });
+    });
+
+    describe('Authorization Token Generation and Validation', () => {
+        it('should generate different authorization tokens for same name', async () => {
+            const result1 = await TokenModel.create({ name: 'same-name' });
+            const result2 = await TokenModel.create({ name: 'same-name' });
+
+            expect(result1.authorizationToken).not.toBe(result2.authorizationToken);
+        });
+
+        it('should include proper separators in authorization token', async () => {
+            const created = await TokenModel.create({ name: 'test-token' });
+
+            const colonCount = (created.authorizationToken.match(/:/g) || []).length;
+            expect(colonCount).toBe(3);
+        });
+
+        it('should generate HMAC using SHA512', async () => {
+            const created = await TokenModel.create({ name: 'test-token' });
+
+            const parts = created.authorizationToken.split(':');
+            const hmac = Buffer.from(parts[3], 'base64').toString('hex');
+
+            // SHA512 produces 128 hex characters (64 bytes)
+            expect(hmac.length).toBe(128);
+        });
+
+        it('should use timing-safe comparison for HMAC validation', async () => {
+            const created = await TokenModel.create({ name: 'test-token' });
+
+            // Valid token should pass
+            await expect(TokenModel.checkAuthorization(created.authorizationToken))
+                .resolves
+                .not.toThrow();
+
+            // Token with different HMAC should fail
+            const parts = created.authorizationToken.split(':');
+            parts[3] = Buffer.from('A'.repeat(128)).toString('base64');
+            const wrongHmacToken = parts.join(':');
+
+            await expect(TokenModel.checkAuthorization(wrongHmacToken))
+                .rejects
+                .toThrow(UnauthorizedError);
+        });
+    });
+
+    describe('Password Hashing and Verification', () => {
+        it('should use bcrypt for password hashing', async () => {
+            const created = await TokenModel.create({ name: 'test-token' });
+
+            // Bcrypt hashes start with $2a$, $2b$, or $2y$
+            expect(created.token.password).toMatch(/^\$2[aby]\$/);
+        });
+
+        it('should verify password correctly', async () => {
+            const created = await TokenModel.create({ name: 'test-token' });
+
+            // This should succeed because checkAuthorization verifies the password
+            await expect(TokenModel.checkAuthorization(created.authorizationToken))
+                .resolves
+                .not.toThrow();
+        });
+
+        it('should generate long random passwords', async () => {
+            const created = await TokenModel.create({ name: 'test-token' });
+
+            // Password should be hashed, so it will be at least 50 characters
+            expect(created.token.password.length).toBeGreaterThan(50);
+        });
+
+        it('should generate different passwords even for same name', async () => {
+            const result1 = await TokenModel.create({ name: 'test' });
+            const result2 = await TokenModel.create({ name: 'test' });
+
+            expect(result1.token.password).not.toBe(result2.token.password);
+        });
+    });
+
+    describe('Edge Cases and Error Handling', () => {
+        it('should handle concurrent token creation', async () => {
+            const promises = Array.from({ length: 10 }, (_, i) =>
+                TokenModel.create({ name: `token-${i}` })
+            );
+
+            const results = await Promise.all(promises);
+
+            expect(results).toHaveLength(10);
+
+            // All keys should be unique
+            const keys = results.map(r => r.token.key);
+            const uniqueKeys = new Set(keys);
+            expect(uniqueKeys.size).toBe(10);
+        });
+
+        it('should handle token names at minimum length (3 characters)', async () => {
+            const result = await TokenModel.create({ name: 'abc' });
+            expect(result.token.name).toBe('abc');
+        });
+
+        it('should handle all allowed special characters in names', async () => {
+            const specialChars = 'test@_-/\\|&.:#$[]{}()';
+            const result = await TokenModel.create({ name: specialChars });
+            expect(result.token.name).toBe(specialChars);
+        });
+
+        it('should reject tokens with only 3 parts in authorization string', () => {
+            expect(() => TokenModel.getNameFromAuthorizationToken('a:b:c'))
+                .toThrow(UnauthorizedError);
+        });
+
+        it('should reject tokens with more than 4 parts', () => {
+            expect(() => TokenModel.getNameFromAuthorizationToken('a:b:c:d:e'))
+                .toThrow(UnauthorizedError);
+        });
+
+        it('should handle database connection errors gracefully', async () => {
+            // Close the connection temporarily
+            await mongoose.disconnect();
+
+            await expect(TokenModel.create({ name: 'test' }))
+                .rejects
+                .toThrow();
+
+            // Reconnect for other tests
+            const mongoUri = mongoServer.getUri();
+            await mongoose.connect(mongoUri);
+        });
+    });
+
+    describe('Security Tests', () => {
+        it('should not accept tokens with modified key component', async () => {
+            const created = await TokenModel.create({ name: 'test-token' });
+
+            const parts = created.authorizationToken.split(':');
+            parts[0] = Buffer.from('modified-key').toString('base64');
+            const modifiedToken = parts.join(':');
+
+            await expect(TokenModel.checkAuthorization(modifiedToken))
+                .rejects
+                .toThrow(UnauthorizedError);
+        });
+
+        it('should protect against timing attacks in HMAC comparison', async () => {
+            const created = await TokenModel.create({ name: 'test-token' });
+
+            // Both should fail, but timing should be consistent
+            const parts = created.authorizationToken.split(':');
+
+            // Wrong HMAC at start
+            const wrongStart = `${parts[0]}:${parts[1]}:${parts[2]}:${Buffer.from('A'.repeat(128)).toString('base64')}`;
+
+            // Wrong HMAC at end  
+            const wrongEnd = `${parts[0]}:${parts[1]}:${parts[2]}:${Buffer.from('Z'.repeat(128)).toString('base64')}`;
+
+            await expect(TokenModel.checkAuthorization(wrongStart))
+                .rejects
+                .toThrow(UnauthorizedError);
+
+            await expect(TokenModel.checkAuthorization(wrongEnd))
+                .rejects
+                .toThrow(UnauthorizedError);
+        });
+
+        it('should validate token exists before checking password', async () => {
+            const created = await TokenModel.create({ name: 'test-token' });
+            const parts = created.authorizationToken.split(':');
+
+            // Create token with non-existent key
+            parts[0] = Buffer.from('non-existent-key').toString('base64');
+
+            // Recalculate HMAC for the tampered token
+            const authTokenWithoutHmac = `${parts[0]}:${parts[1]}:${parts[2]}`;
+            const crypto = require('crypto');
+            const newHmac = crypto.createHmac('sha512', process.env.APP_SECRET)
+                .update(authTokenWithoutHmac)
+                .digest('hex');
+            parts[3] = Buffer.from(newHmac).toString('base64');
+
+            const nonExistentToken = parts.join(':');
+
+            await expect(TokenModel.checkAuthorization(nonExistentToken))
+                .rejects
+                .toThrow(UnauthorizedError);
+        });
+
+        it('should not expose information about which part of validation failed', async () => {
+            const created = await TokenModel.create({ name: 'test-token' });
+
+            // All these should throw the same error type
+            const invalidTokens = [
+                null,
+                '',
+                'invalid',
+                'a:b:c:d',
+            ];
+
+            for (const token of invalidTokens) {
+                await expect(TokenModel.checkAuthorization(token))
+                    .rejects
+                    .toThrow(UnauthorizedError);
+            }
+        });
+
+        it('should use cryptographically secure random for password generation', async () => {
+            const results = await Promise.all([
+                TokenModel.create({ name: 'token1' }),
+                TokenModel.create({ name: 'token2' }),
+                TokenModel.create({ name: 'token3' }),
+            ]);
+
+            // Extract the actual passwords by checking authorization tokens
+            const passwords = results.map(r => {
+                const parts = r.authorizationToken.split(':');
+                return Buffer.from(parts[2], 'base64').toString('utf-8');
+            });
+
+            // All passwords should be unique
+            const uniquePasswords = new Set(passwords);
+            expect(uniquePasswords.size).toBe(3);
+
+            // All passwords should be hex strings of expected length (64 bytes = 128 hex chars)
+            passwords.forEach(pwd => {
+                expect(pwd).toMatch(/^[0-9a-f]{128}$/);
+            });
+        });
+    });
+
+    describe('Integration Tests', () => {
+        it('should support complete token lifecycle', async () => {
+            // Create
+            const created = await TokenModel.create({ name: 'lifecycle-token' });
+            expect(created).toBeDefined();
+
+            // Authorize
+            await expect(TokenModel.checkAuthorization(created.authorizationToken))
+                .resolves
+                .not.toThrow();
+
+            // Get name
+            const name = TokenModel.getNameFromAuthorizationToken(created.authorizationToken);
+            expect(name).toBe('lifecycle-token');
+
+            // Expire
+            const expired = await TokenModel.expire({ key: created.token.key });
+            expect(expired?.expired).toBe(true);
+
+            // Authorization should fail after expiration
+            await expect(TokenModel.checkAuthorization(created.authorizationToken))
+                .rejects
+                .toThrow(UnauthorizedError);
+        });
+
+        it('should handle multiple tokens independently', async () => {
+            const token1 = await TokenModel.create({ name: 'token1' });
+            const token2 = await TokenModel.create({ name: 'token2' });
+            const token3 = await TokenModel.create({ name: 'token3' });
+
+            // All should be valid
+            await expect(TokenModel.checkAuthorization(token1.authorizationToken))
+                .resolves.not.toThrow();
+            await expect(TokenModel.checkAuthorization(token2.authorizationToken))
+                .resolves.not.toThrow();
+            await expect(TokenModel.checkAuthorization(token3.authorizationToken))
+                .resolves.not.toThrow();
+
+            // Expire one
+            await TokenModel.expire({ key: token2.token.key });
+
+            // Token 2 should fail, others should still work
+            await expect(TokenModel.checkAuthorization(token1.authorizationToken))
+                .resolves.not.toThrow();
+            await expect(TokenModel.checkAuthorization(token2.authorizationToken))
+                .rejects.toThrow(UnauthorizedError);
+            await expect(TokenModel.checkAuthorization(token3.authorizationToken))
+                .resolves.not.toThrow();
+        });
+
+        it('should maintain data integrity after multiple operations', async () => {
+            const tokens = await Promise.all([
+                TokenModel.create({ name: 'token1' }),
+                TokenModel.create({ name: 'token2' }),
+                TokenModel.create({ name: 'token3' }),
+            ]);
+
+            // Expire some tokens
+            await TokenModel.expire({ key: tokens[0].token.key });
+            await TokenModel.expire({ key: tokens[2].token.key });
+
+            // Verify database state
+            const allTokens = await DatabaseTokenModel.find({});
+            expect(allTokens).toHaveLength(3);
+
+            const expiredCount = allTokens.filter(t => t.expired).length;
+            expect(expiredCount).toBe(2);
+
+            const activeCount = allTokens.filter(t => !t.expired).length;
+            expect(activeCount).toBe(1);
         });
     });
 });

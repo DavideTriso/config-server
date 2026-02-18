@@ -10,7 +10,7 @@ describe('TokenValidator', () => {
             });
 
             it('should accept a valid token name with maximum length', () => {
-                const input = { name: 'a'.repeat(200) };
+                const input = { name: 'a'.repeat(30) };
                 expect(() => TokenValidator.validateCreateTokenInput(input)).not.toThrow();
             });
 
@@ -110,7 +110,7 @@ describe('TokenValidator', () => {
             });
 
             it('should accept a complex token name', () => {
-                const input = { name: 'api_token@prod/v1.0:service#123' };
+                const input = { name: '@/v1.0:service#123' };
                 expect(() => TokenValidator.validateCreateTokenInput(input)).not.toThrow();
             });
         });
@@ -134,16 +134,16 @@ describe('TokenValidator', () => {
                 expect(() => TokenValidator.validateCreateTokenInput(input)).toThrow(/Name must be at least 3 characters long/);
             });
 
-            it('should reject a token name that exceeds maximum length (201 characters)', () => {
-                const input = { name: 'a'.repeat(201) };
+            it('should reject a token name that exceeds maximum length (31 characters)', () => {
+                const input = { name: 'a'.repeat(31) };
                 expect(() => TokenValidator.validateCreateTokenInput(input)).toThrow(ValidationError);
-                expect(() => TokenValidator.validateCreateTokenInput(input)).toThrow(/Name must not exceed 200 characters/);
+                expect(() => TokenValidator.validateCreateTokenInput(input)).toThrow(/Name must not exceed 30 characters/);
             });
 
             it('should reject a token name that is significantly too long', () => {
                 const input = { name: 'a'.repeat(500) };
                 expect(() => TokenValidator.validateCreateTokenInput(input)).toThrow(ValidationError);
-                expect(() => TokenValidator.validateCreateTokenInput(input)).toThrow(/Name must not exceed 200 characters/);
+                expect(() => TokenValidator.validateCreateTokenInput(input)).toThrow(/Name must not exceed 30 characters/);
             });
         });
 
@@ -320,13 +320,13 @@ describe('TokenValidator', () => {
                 expect(() => TokenValidator.validateCreateTokenInput(input)).not.toThrow();
             });
 
-            it('should accept a token name with exactly 200 characters', () => {
-                const input = { name: 'a'.repeat(200) };
+            it('should accept a token name with exactly 30 characters', () => {
+                const input = { name: 'a'.repeat(30) };
                 expect(() => TokenValidator.validateCreateTokenInput(input)).not.toThrow();
             });
 
-            it('should reject a token name with exactly 201 characters', () => {
-                const input = { name: 'a'.repeat(201) };
+            it('should reject a token name with exactly 31 characters', () => {
+                const input = { name: 'a'.repeat(31) };
                 expect(() => TokenValidator.validateCreateTokenInput(input)).toThrow(ValidationError);
             });
 

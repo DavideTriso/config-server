@@ -2,7 +2,7 @@ import { ValidationError } from 'apollo-server-core';
 import { z } from 'zod';
 
 
-export default class ConfiguratioValidator {
+export default class ConfigurationValidator {
     private static readonly keyValidationRule = z
         .string()
         .min(1, 'Key must be at least 1 character long')
@@ -34,25 +34,25 @@ export default class ConfiguratioValidator {
             (value: unknown) => {
                 try {
                     const serialized = JSON.stringify(value);
-                    return serialized.length <= 10000;
+                    return serialized.length <= 50000;
                 } catch {
                     return false;
                 }
             },
             {
-                message: 'Value must be valid JSON and not exceed 10000 characters when serialized'
+                message: 'Value must be valid JSON and not exceed 50000 characters when serialized'
             }
         );
 
     private static readonly upsertConfigurationSchema = z.object({
-        key: ConfiguratioValidator.keyValidationRule,
-        userId: ConfiguratioValidator.userIdValidationRule,
-        value: ConfiguratioValidator.configValidationRule,
+        key: ConfigurationValidator.keyValidationRule,
+        userId: ConfigurationValidator.userIdValidationRule,
+        value: ConfigurationValidator.configValidationRule,
     });
 
     public static validateUpsertInput(input: unknown): void {
         try {
-            ConfiguratioValidator.upsertConfigurationSchema.parse(input);
+            ConfigurationValidator.upsertConfigurationSchema.parse(input);
         } catch (error) {
             if (error instanceof z.ZodError) {
                 throw new ValidationError(error.message);

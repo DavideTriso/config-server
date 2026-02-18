@@ -1,3 +1,3 @@
 export default interface ResolverContextInterface {
-    token: string | null;
+    authorizationToken: string | null;
 }

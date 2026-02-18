@@ -3,7 +3,8 @@ import ResolverContextInterface from "./types/ResolverContextInterface";
 
 export default function contextMiddleware(request: RequestInterface): ResolverContextInterface {
     const authorizationHeader = request.headers.authorization ?? '';
-    const token = authorizationHeader.startsWith('Bearer ') ? authorizationHeader.slice(7) : null;
+    const authorizationToken = authorizationHeader
+        .startsWith('Bearer ') ? authorizationHeader.slice(7) : null;
 
-    return { token };
+    return { authorizationToken };
 }

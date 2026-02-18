@@ -4,21 +4,23 @@ import TokenDocumentInterface from './types/TokenInterface';
 
 const tokenSchema = new Schema<TokenDocumentInterface, TokenModelInterface>(
     {
-        token: { type: String, required: true },
+        password: { type: String, required: true },
+        key: { type: String, required: true },
         name: { type: String, required: true },
-        admin: { type: Boolean, required: true, default: false },
         expired: { type: Boolean, required: true, default: false },
-        createdOnDateTime: { type: Schema.Types.Date, required: true },
-        createdBy: { type: String, required: true },
-        updatedOnDateTime: { type: Schema.Types.Date },
-        updatedBy: { type: String }
+        expiredOnDateTime: { type: Schema.Types.Date }
     },
     { collection: 'Tokens' }
 );
 
 tokenSchema.index(
-    { token: 1, expired: 1, admin: 1 },
-    { name: 'idx_token_expired_admin', unique: true }
+    { key: 1 },
+    { name: 'idx_key', unique: true }
+);
+
+tokenSchema.index(
+    { key: 1, expired: 1 },
+    { name: 'idx_key_expired' }
 );
 
 export const TokenModel = mongoose.model<TokenDocumentInterface, TokenModelInterface>(

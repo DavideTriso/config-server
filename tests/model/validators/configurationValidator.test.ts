@@ -1,7 +1,7 @@
 import { ValidationError } from 'apollo-server-core';
-import ConfiguratioValidator from '../../../src/model/validators/ConfiguratioValidator';
+import ConfigurationValidator from '../../../src/model/validators/ConfigurationValidator';
 
-describe('ConfiguratioValidator', () => {
+describe('ConfigurationValidator', () => {
     describe('validateUpsertInput', () => {
         describe('Valid inputs', () => {
             it('should accept valid input with all required fields', () => {
@@ -10,7 +10,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'validUserId',
                     value: { setting: 'value' }
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept input with string value', () => {
@@ -19,7 +19,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user123',
                     value: 'simpleString'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept input with number value', () => {
@@ -28,7 +28,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'admin',
                     value: 42
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept input with boolean value', () => {
@@ -37,7 +37,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: true
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept input with null value', () => {
@@ -46,7 +46,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: null
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept input with array value', () => {
@@ -55,7 +55,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'admin',
                     value: [1, 2, 3, 'test', true]
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept input with nested object value', () => {
@@ -73,7 +73,7 @@ describe('ConfiguratioValidator', () => {
                         }
                     }
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept input with complex nested array and object value', () => {
@@ -85,7 +85,7 @@ describe('ConfiguratioValidator', () => {
                         { id: 2, name: 'Bob', roles: ['user'] }
                     ]
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept key with minimum length (1 character)', () => {
@@ -94,7 +94,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept key with maximum length (200 characters)', () => {
@@ -103,7 +103,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept userId with minimum length (1 character)', () => {
@@ -112,7 +112,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'a',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept userId with maximum length (200 characters)', () => {
@@ -121,7 +121,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'a'.repeat(200),
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept key with all allowed special characters', () => {
@@ -130,7 +130,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept userId with all allowed special characters', () => {
@@ -139,7 +139,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user@_-/\\|&.:#$[]{}()',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept key with alphanumeric characters', () => {
@@ -148,7 +148,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept userId with alphanumeric characters', () => {
@@ -157,7 +157,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'User123ID',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept key starting with special character', () => {
@@ -166,7 +166,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept key with path-like structure', () => {
@@ -175,7 +175,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'localhost'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept userId with email-like format', () => {
@@ -184,20 +184,20 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user@domain.com',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept value at maximum serialized length', () => {
-                // Create a value that serializes to exactly 10000 chars
-                const largeString = 'a'.repeat(9996); // Account for quotes and property name
+                // Create a value that serializes to exactly 50000 chars
+                const largeString = 'a'.repeat(49996); // Account for quotes and property name
                 const input = {
                     key: 'key1',
                     userId: 'user1',
                     value: largeString
                 };
                 const serialized = JSON.stringify(input.value);
-                expect(serialized.length).toBeLessThanOrEqual(10000);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(serialized.length).toBeLessThanOrEqual(50000);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept input with extra fields', () => {
@@ -207,7 +207,7 @@ describe('ConfiguratioValidator', () => {
                     value: 'test',
                     extraField: 'ignored'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
         });
 
@@ -218,8 +218,8 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/Key must be at least 1 character long/);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/Key must be at least 1 character long/);
             });
 
             it('should reject input with key exceeding maximum length', () => {
@@ -228,8 +228,8 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/Key must not exceed 200 characters/);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/Key must not exceed 200 characters/);
             });
 
             it('should reject key with spaces', () => {
@@ -238,8 +238,8 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/Key can only contain alphanumeric characters/);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/Key can only contain alphanumeric characters/);
             });
 
             it('should reject key with exclamation mark', () => {
@@ -248,8 +248,8 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/Key can only contain alphanumeric characters/);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/Key can only contain alphanumeric characters/);
             });
 
             it('should reject key with question mark', () => {
@@ -258,8 +258,8 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/Key can only contain alphanumeric characters/);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/Key can only contain alphanumeric characters/);
             });
 
             it('should reject key with asterisk', () => {
@@ -268,8 +268,8 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/Key can only contain alphanumeric characters/);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/Key can only contain alphanumeric characters/);
             });
 
             it('should reject key with plus sign', () => {
@@ -278,8 +278,8 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/Key can only contain alphanumeric characters/);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/Key can only contain alphanumeric characters/);
             });
 
             it('should reject key with comma', () => {
@@ -288,8 +288,8 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/Key can only contain alphanumeric characters/);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/Key can only contain alphanumeric characters/);
             });
 
             it('should reject key with semicolon', () => {
@@ -298,8 +298,8 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/Key can only contain alphanumeric characters/);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/Key can only contain alphanumeric characters/);
             });
 
             it('should reject key with newline character', () => {
@@ -308,8 +308,8 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/Key can only contain alphanumeric characters/);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/Key can only contain alphanumeric characters/);
             });
 
             it('should reject key with tab character', () => {
@@ -318,8 +318,8 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/Key can only contain alphanumeric characters/);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/Key can only contain alphanumeric characters/);
             });
 
             it('should reject key with emoji', () => {
@@ -328,8 +328,8 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/Key can only contain alphanumeric characters/);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/Key can only contain alphanumeric characters/);
             });
 
             it('should reject key that is not a string (number)', () => {
@@ -338,7 +338,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
             });
 
             it('should reject key that is not a string (boolean)', () => {
@@ -347,7 +347,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
             });
 
             it('should reject key that is not a string (object)', () => {
@@ -356,7 +356,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
             });
 
             it('should reject key that is not a string (array)', () => {
@@ -365,7 +365,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
             });
 
             it('should reject key that is null', () => {
@@ -374,7 +374,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
             });
 
             it('should reject key that is undefined', () => {
@@ -383,7 +383,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
             });
         });
 
@@ -394,8 +394,8 @@ describe('ConfiguratioValidator', () => {
                     userId: '',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/UserId must be at least 1 character long/);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/UserId must be at least 1 character long/);
             });
 
             it('should reject input with userId exceeding maximum length', () => {
@@ -404,8 +404,8 @@ describe('ConfiguratioValidator', () => {
                     userId: 'a'.repeat(201),
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/UserId must not exceed 200 characters/);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/UserId must not exceed 200 characters/);
             });
 
             it('should reject userId with spaces', () => {
@@ -414,8 +414,8 @@ describe('ConfiguratioValidator', () => {
                     userId: 'invalid user',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/UserId can only contain alphanumeric characters/);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/UserId can only contain alphanumeric characters/);
             });
 
             it('should reject userId with exclamation mark', () => {
@@ -424,8 +424,8 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user!',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/UserId can only contain alphanumeric characters/);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/UserId can only contain alphanumeric characters/);
             });
 
             it('should reject userId with question mark', () => {
@@ -434,8 +434,8 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user?',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/UserId can only contain alphanumeric characters/);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/UserId can only contain alphanumeric characters/);
             });
 
             it('should reject userId with asterisk', () => {
@@ -444,8 +444,8 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user*',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/UserId can only contain alphanumeric characters/);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/UserId can only contain alphanumeric characters/);
             });
 
             it('should reject userId with comma', () => {
@@ -454,8 +454,8 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user,id',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/UserId can only contain alphanumeric characters/);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/UserId can only contain alphanumeric characters/);
             });
 
             it('should reject userId with semicolon', () => {
@@ -464,8 +464,8 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user;id',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/UserId can only contain alphanumeric characters/);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/UserId can only contain alphanumeric characters/);
             });
 
             it('should reject userId with newline character', () => {
@@ -474,8 +474,8 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user\nid',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/UserId can only contain alphanumeric characters/);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/UserId can only contain alphanumeric characters/);
             });
 
             it('should reject userId with tab character', () => {
@@ -484,8 +484,8 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user\tid',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/UserId can only contain alphanumeric characters/);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/UserId can only contain alphanumeric characters/);
             });
 
             it('should reject userId with emoji', () => {
@@ -494,8 +494,8 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user🚀',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/UserId can only contain alphanumeric characters/);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/UserId can only contain alphanumeric characters/);
             });
 
             it('should reject userId that is not a string (number)', () => {
@@ -504,7 +504,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 123,
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
             });
 
             it('should reject userId that is not a string (boolean)', () => {
@@ -513,7 +513,7 @@ describe('ConfiguratioValidator', () => {
                     userId: true,
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
             });
 
             it('should reject userId that is not a string (object)', () => {
@@ -522,7 +522,7 @@ describe('ConfiguratioValidator', () => {
                     userId: { id: 'user' },
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
             });
 
             it('should reject userId that is not a string (array)', () => {
@@ -531,7 +531,7 @@ describe('ConfiguratioValidator', () => {
                     userId: ['user'],
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
             });
 
             it('should reject userId that is null', () => {
@@ -540,7 +540,7 @@ describe('ConfiguratioValidator', () => {
                     userId: null,
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
             });
 
             it('should reject userId that is undefined', () => {
@@ -549,20 +549,20 @@ describe('ConfiguratioValidator', () => {
                     userId: undefined,
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
             });
         });
 
         describe('Invalid inputs - value validation', () => {
             it('should reject value that exceeds maximum serialized length', () => {
-                const largeString = 'a'.repeat(10001);
+                const largeString = 'a'.repeat(50001);
                 const input = {
                     key: 'key1',
                     userId: 'user1',
                     value: largeString
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/Value must be valid JSON and not exceed 10000 characters/);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/Value must be valid JSON and not exceed 50000 characters/);
             });
 
             it('should reject large object that exceeds serialization limit', () => {
@@ -576,9 +576,9 @@ describe('ConfiguratioValidator', () => {
                     value: largeObject
                 };
                 const serialized = JSON.stringify(input.value);
-                expect(serialized.length).toBeGreaterThan(10000);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/Value must be valid JSON and not exceed 10000 characters/);
+                expect(serialized.length).toBeGreaterThan(50000);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/Value must be valid JSON and not exceed 50000 characters/);
             });
 
             it('should reject large array that exceeds serialization limit', () => {
@@ -589,9 +589,9 @@ describe('ConfiguratioValidator', () => {
                     value: largeArray
                 };
                 const serialized = JSON.stringify(input.value);
-                expect(serialized.length).toBeGreaterThan(10000);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/Value must be valid JSON and not exceed 10000 characters/);
+                expect(serialized.length).toBeGreaterThan(50000);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/Value must be valid JSON and not exceed 50000 characters/);
             });
 
             it('should reject value with circular reference', () => {
@@ -602,8 +602,8 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: circularObj
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/Value must be valid JSON and not exceed 10000 characters/);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/Value must be valid JSON and not exceed 50000 characters/);
             });
 
             it('should reject value with nested circular reference', () => {
@@ -616,8 +616,8 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: obj1
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(/Value must be valid JSON and not exceed 10000 characters/);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(/Value must be valid JSON and not exceed 50000 characters/);
             });
         });
 
@@ -627,7 +627,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
             });
 
             it('should reject input with missing userId field', () => {
@@ -635,7 +635,7 @@ describe('ConfiguratioValidator', () => {
                     key: 'key1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
             });
 
             it('should reject input with missing value field', () => {
@@ -643,32 +643,32 @@ describe('ConfiguratioValidator', () => {
                     key: 'key1',
                     userId: 'user1'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
             });
 
             it('should reject empty object input', () => {
                 const input = {};
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
             });
 
             it('should reject null input', () => {
-                expect(() => ConfiguratioValidator.validateUpsertInput(null)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(null)).toThrow(ValidationError);
             });
 
             it('should reject undefined input', () => {
-                expect(() => ConfiguratioValidator.validateUpsertInput(undefined)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(undefined)).toThrow(ValidationError);
             });
 
             it('should reject string input instead of object', () => {
-                expect(() => ConfiguratioValidator.validateUpsertInput('invalid')).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput('invalid')).toThrow(ValidationError);
             });
 
             it('should reject number input instead of object', () => {
-                expect(() => ConfiguratioValidator.validateUpsertInput(123)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(123)).toThrow(ValidationError);
             });
 
             it('should reject array input instead of object', () => {
-                expect(() => ConfiguratioValidator.validateUpsertInput([])).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput([])).toThrow(ValidationError);
             });
         });
 
@@ -679,7 +679,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept key with exactly 200 characters', () => {
@@ -688,7 +688,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should reject key with exactly 201 characters', () => {
@@ -697,7 +697,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
             });
 
             it('should accept userId with exactly 1 character', () => {
@@ -706,7 +706,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'a',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept userId with exactly 200 characters', () => {
@@ -715,7 +715,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'a'.repeat(200),
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should reject userId with exactly 201 characters', () => {
@@ -724,7 +724,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'a'.repeat(201),
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).toThrow(ValidationError);
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).toThrow(ValidationError);
             });
 
             it('should accept value with empty object', () => {
@@ -733,7 +733,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: {}
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept value with empty array', () => {
@@ -742,7 +742,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: []
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept value with empty string', () => {
@@ -751,7 +751,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: ''
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept value with zero', () => {
@@ -760,7 +760,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 0
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept value with false', () => {
@@ -769,7 +769,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: false
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept key with only numbers', () => {
@@ -778,7 +778,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept userId with only numbers', () => {
@@ -787,7 +787,7 @@ describe('ConfiguratioValidator', () => {
                     userId: '123',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept key with only special characters', () => {
@@ -796,7 +796,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept userId with only special characters', () => {
@@ -805,7 +805,7 @@ describe('ConfiguratioValidator', () => {
                     userId: '@_-',
                     value: 'test'
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept deeply nested value within size limit', () => {
@@ -826,7 +826,7 @@ describe('ConfiguratioValidator', () => {
                         }
                     }
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept value with mixed types in array', () => {
@@ -835,7 +835,7 @@ describe('ConfiguratioValidator', () => {
                     userId: 'user1',
                     value: [1, 'two', true, null, { four: 4 }, [5]]
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept value with special JSON characters', () => {
@@ -849,7 +849,7 @@ describe('ConfiguratioValidator', () => {
                         tab: 'col1\tcol2'
                     }
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept value with unicode characters', () => {
@@ -862,7 +862,7 @@ describe('ConfiguratioValidator', () => {
                         emoji: '🚀🌟'
                     }
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
 
             it('should accept realistic configuration example', () => {
@@ -892,7 +892,7 @@ describe('ConfiguratioValidator', () => {
                         ]
                     }
                 };
-                expect(() => ConfiguratioValidator.validateUpsertInput(input)).not.toThrow();
+                expect(() => ConfigurationValidator.validateUpsertInput(input)).not.toThrow();
             });
         });
     });
