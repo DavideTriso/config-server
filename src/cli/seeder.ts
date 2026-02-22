@@ -4,6 +4,7 @@ dotenv.config();
 
 import { program } from 'commander';
 import seed from '../seed/seed';
+import DatabaseConnection from '../database/DatabaseConnection';
 
 program.name('seeder').description('CLI for seeding the database with initial data').version('1.0.0');
 
@@ -13,6 +14,7 @@ program
     .action(async (): Promise<void> => {
         try {
             console.log('Starting database seeding...');
+            await DatabaseConnection.getInstance().connect();
             await seed();
             console.log('Database seeding completed successfully');;
             process.exit(0);

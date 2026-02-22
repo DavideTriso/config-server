@@ -1,6 +1,6 @@
 import ConfigurationInterface from "../database/types/ConfigurationInterface";
 import UpsertConfigurationInputInterface from "./types/UpsertConfigurationInputInterface";
-import { ConfigurationModel as DatabaseConfigurationModel } from "../database/ConfigurationModel";
+import DatabaseConfigurationModel from "../database/ConfigurationModel";
 import TokenModel from "./TokenModel";
 import ConfigurationValidator from "./validators/ConfigurationValidator";
 import Users from "./constants/Users";
@@ -25,6 +25,7 @@ export default class ConfigurationModel {
             : Users.ANONYMOUS;
 
         return DatabaseConfigurationModel
+            .getModel()
             .findOneAndUpdate(
                 { key: input.key, userId: input.userId },
                 {
@@ -48,7 +49,7 @@ export default class ConfigurationModel {
             throw new InternalServerError("This method is internal.");
         }
 
-        await DatabaseConfigurationModel.deleteMany({});
+        await DatabaseConfigurationModel.getModel().deleteMany({});
     }
 
     public static async findByUserIdAndKeys(
@@ -61,6 +62,7 @@ export default class ConfigurationModel {
         }
 
         return await DatabaseConfigurationModel
+            .getModel()
             .find({
                 userId: filters.userId,
                 ...(filters.keys && filters.keys.length > 0 ? { key: { $in: filters.keys } } : {})

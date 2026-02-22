@@ -20,8 +20,7 @@ function createApolloServer(): ApolloServer<ResolverContextInterface> {
 function setupGracefulShutdown(): void {
     const shutdownHandler = async (signal: string) => {
         console.log(`${signal} received, shutting down gracefully`);
-        const databaseConnection = new DatabaseConnection();
-        await databaseConnection.disconnect();
+        await DatabaseConnection.getInstance().disconnect();
         process.exit(0);
     };
 
@@ -30,8 +29,7 @@ function setupGracefulShutdown(): void {
 }
 
 async function startServer(): Promise<void> {
-    const databaseConnection = new DatabaseConnection();
-    await databaseConnection.connect();
+    await DatabaseConnection.getInstance().connect();
 
     const server = createApolloServer();
 

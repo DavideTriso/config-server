@@ -1,15 +1,13 @@
 import { ApolloServer } from '@apollo/server';
-import { MongoMemoryServer } from 'mongodb-memory-server';
-import mongoose from 'mongoose';
 import typeDefs from '../../src/graphql/schema';
 import resolvers from '../../src/graphql/resolvers';
 import contextMiddleware from '../../src/graphql/contextMiddleware';
 import ResolverContextInterface from '../../src/graphql/types/ResolverContextInterface';
 import TokenModel from '../../src/model/TokenModel';
 import ConfigurationModel from '../../src/model/ConfigurationModel';
+import DatabaseConnection from '../../src/database/DatabaseConnection';
 
 describe('GraphQL API Functional Tests', () => {
-    let mongoServer: MongoMemoryServer;
     let server: ApolloServer<ResolverContextInterface>;
     let authorizationToken: string;
 
@@ -18,9 +16,8 @@ describe('GraphQL API Functional Tests', () => {
         process.env.APP_SECRET = 'test-secret-key-for-functional-tests';
 
         // Start in-memory MongoDB instance
-        mongoServer = await MongoMemoryServer.create();
-        const mongoUri = mongoServer.getUri();
-        await mongoose.connect(mongoUri);
+        DatabaseConnection.enableTestMemoryServer();
+        await DatabaseConnection.getInstance().connect();
 
         // Create Apollo Server instance
         server = new ApolloServer<ResolverContextInterface>({
@@ -30,8 +27,7 @@ describe('GraphQL API Functional Tests', () => {
     });
 
     afterAll(async () => {
-        await mongoose.disconnect();
-        await mongoServer.stop();
+        await DatabaseConnection.getInstance().disconnect();
     });
 
     beforeEach(async () => {

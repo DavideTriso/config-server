@@ -1,29 +1,25 @@
-import { MongoMemoryServer } from 'mongodb-memory-server';
-import mongoose from 'mongoose';
 import TokenModel from '../../src/model/TokenModel';
-import { TokenModel as DatabaseTokenModel } from '../../src/database/TokenModel';
+import DatabaseTokenModel from '../../src/database/TokenModel';
 import UnauthorizedError from '../../src/model/errors/UnauthorizedError';
 import InternalServerError from '../../src/model/errors/InternalServerError';
 import { ValidationError } from 'apollo-server-core';
 import DuplicateEntryError from '../../src/model/errors/DuplicaException';
 import bcrypt from 'bcrypt';
+import DatabaseConnection from '../../src/database/DatabaseConnection';
 
 describe('TokenModel', () => {
-    let mongoServer: MongoMemoryServer;
 
     beforeAll(async () => {
-        mongoServer = await MongoMemoryServer.create();
-        const mongoUri = mongoServer.getUri();
-        await mongoose.connect(mongoUri);
+        await DatabaseConnection.enableTestMemoryServer();
+        await DatabaseConnection.getInstance().connect();
     });
 
     afterAll(async () => {
-        await mongoose.disconnect();
-        await mongoServer.stop();
+        await DatabaseConnection.getInstance().disconnect();
     });
 
     beforeEach(async () => {
-        await DatabaseTokenModel.deleteMany({});
+        await DatabaseTokenModel.getModel().deleteMany();
     });
 
     describe('create', () => {
@@ -137,7 +133,7 @@ describe('TokenModel', () => {
         it('should persist token to database', async () => {
             const result = await TokenModel.create({ name: 'test-token' });
 
-            const dbToken = await DatabaseTokenModel.findOne({ name: result.token.name });
+            const dbToken = await DatabaseTokenModel.getModel().findOne({ name: result.token.name });
             expect(dbToken).toBeDefined();
             expect(dbToken?.name).toBe('test-token');
         });
@@ -197,7 +193,7 @@ describe('TokenModel', () => {
 
             await TokenModel.expire({ name: created.token.name });
 
-            const dbToken = await DatabaseTokenModel.findOne({ name: created.token.name });
+            const dbToken = await DatabaseTokenModel.getModel().findOne({ name: created.token.name });
             expect(dbToken?.expired).toBe(true);
         });
     });
@@ -210,7 +206,7 @@ describe('TokenModel', () => {
 
             await TokenModel.deleteAll(true);
 
-            const count = await DatabaseTokenModel.countDocuments();
+            const count = await DatabaseTokenModel.getModel().countDocuments();
             expect(count).toBe(0);
         });
 
@@ -225,7 +221,7 @@ describe('TokenModel', () => {
 
             await TokenModel.deleteAll(true);
 
-            const count = await DatabaseTokenModel.countDocuments();
+            const count = await DatabaseTokenModel.getModel().countDocuments();
             expect(count).toBe(0);
         });
     });
@@ -276,7 +272,7 @@ describe('TokenModel', () => {
             const created = await TokenModel.create({ name: 'test-token' });
 
             // Delete the token from database
-            await DatabaseTokenModel.deleteOne({ name: created.token.name });
+            await DatabaseTokenModel.getModel().deleteOne({ name: created.token.name });
 
             await expect(TokenModel.checkAuthorization(created.authorizationToken))
                 .rejects
@@ -313,7 +309,7 @@ describe('TokenModel', () => {
             const created = await TokenModel.create({ name: 'test-token' });
 
             // Change the password in the database
-            await DatabaseTokenModel.findOneAndUpdate(
+            await DatabaseTokenModel.getModel().findOneAndUpdate(
                 { name: created.token.name },
                 { password: await bcrypt.hash('different-password', 10) }
             );
@@ -543,15 +539,14 @@ describe('TokenModel', () => {
 
         it('should handle database connection errors gracefully', async () => {
             // Close the connection temporarily
-            await mongoose.disconnect();
+            await DatabaseConnection.getInstance().disconnect();
 
             await expect(TokenModel.create({ name: 'test' }))
                 .rejects
                 .toThrow();
 
             // Reconnect for other tests
-            const mongoUri = mongoServer.getUri();
-            await mongoose.connect(mongoUri);
+            await DatabaseConnection.getInstance().connect();
         });
     });
 
@@ -715,7 +710,7 @@ describe('TokenModel', () => {
             await TokenModel.expire({ name: tokens[2].token.name });
 
             // Verify database state
-            const allTokens = await DatabaseTokenModel.find({});
+            const allTokens = await DatabaseTokenModel.getModel().find({});
             expect(allTokens).toHaveLength(3);
 
             const expiredCount = allTokens.filter(t => t.expired).length;

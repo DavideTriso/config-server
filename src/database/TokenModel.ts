@@ -22,7 +22,13 @@ tokenSchema.index(
     { name: 'idx_name_expired' }
 );
 
-export const TokenModel = mongoose.model<TokenDocumentInterface, TokenModelInterface>(
+const tokenModel = mongoose.model<TokenDocumentInterface, TokenModelInterface>(
     'Token',
     tokenSchema,
 );
+
+export default class TokenModel {
+    public static getModel() {
+        return tokenModel;
+    }
+}

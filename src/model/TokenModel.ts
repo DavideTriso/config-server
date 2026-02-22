@@ -1,11 +1,10 @@
 import TokenInterface from "../database/types/TokenInterface";
 import CreateTokenInputInterface from "./types/CreateTokenInputInterface";
-import { TokenModel as DatabaseTokenModel } from "../database/TokenModel";
+import DatabaseTokenModel from "../database/TokenModel";
 import { randomBytes, createHmac, timingSafeEqual } from 'crypto';
 import ExpireTokenInputInterface from "./types/ExpireTokenInputInterface";
 import UnauthorizedError from "./errors/UnauthorizedError";
 import TokenValidator from "./validators/TokenValidator";
-import ValidationError from "./validators/errors/ValidationError";
 import bcrypt from 'bcrypt';
 import CreateTokenResultType from "./types/CreateTokenResultType";
 import ParsedAuthorizationTokenType from "./types/ParsedAuthorizationTokenType";
@@ -34,7 +33,7 @@ export default class TokenModel {
         }
 
         try {
-            const token = await DatabaseTokenModel.create(_input);
+            const token = await DatabaseTokenModel.getModel().create(_input);
             const authorizationToken = this.generateAuthorizationToken(token, unhashedPassword);
             return { authorizationToken, token };
         } catch (error: any) {
@@ -47,6 +46,7 @@ export default class TokenModel {
 
     public static async expire(input: ExpireTokenInputInterface): Promise<TokenInterface | null> {
         return DatabaseTokenModel
+            .getModel()
             .findOneAndUpdate(
                 { name: input.name, expired: false },
                 {
@@ -69,11 +69,12 @@ export default class TokenModel {
             throw new InternalServerError("This method is internal.");
         }
 
-        await DatabaseTokenModel.deleteMany({});
+        await DatabaseTokenModel.getModel().deleteMany({});
     }
 
     private static async findByName(filters: { name: string, expired: boolean }): Promise<TokenInterface | null> {
         return await DatabaseTokenModel
+            .getModel()
             .findOne(filters)
             .lean<TokenInterface | null>();
     }

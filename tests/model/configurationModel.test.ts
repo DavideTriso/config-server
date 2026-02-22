@@ -1,35 +1,31 @@
-import { MongoMemoryServer } from 'mongodb-memory-server';
-import mongoose from 'mongoose';
+import DatabaseConnection from '../../src/database/DatabaseConnection';
 import ConfigurationModel from '../../src/model/ConfigurationModel';
 import TokenModel from '../../src/model/TokenModel';
-import { ConfigurationModel as DatabaseConfigurationModel } from '../../src/database/ConfigurationModel';
-import { TokenModel as DatabaseTokenModel } from '../../src/database/TokenModel';
+import DatabaseConfigurationModel from '../../src/database/ConfigurationModel';
+import DatabaseTokenModel from '../../src/database/TokenModel';
 import UnauthorizedError from '../../src/model/errors/UnauthorizedError';
 import Users from '../../src/model/constants/Users';
 import { ValidationError } from 'apollo-server-core';
 
 describe('ConfigurationModel', () => {
-    let mongoServer: MongoMemoryServer;
     let validAuthToken: string;
     let validTokenName: string;
     const originalAppSecret = process.env.APP_SECRET;
 
     beforeAll(async () => {
         process.env.APP_SECRET = 'test-secret-key-for-hmac-generation';
-        mongoServer = await MongoMemoryServer.create();
-        const mongoUri = mongoServer.getUri();
-        await mongoose.connect(mongoUri);
+        await DatabaseConnection.enableTestMemoryServer();
+        await DatabaseConnection.getInstance().connect();
     });
 
     afterAll(async () => {
-        await mongoose.disconnect();
-        await mongoServer.stop();
+        await DatabaseConnection.getInstance().disconnect();
         process.env.APP_SECRET = originalAppSecret;
     });
 
     beforeEach(async () => {
-        await DatabaseConfigurationModel.deleteMany({});
-        await DatabaseTokenModel.deleteMany({});
+        await DatabaseConfigurationModel.getModel().deleteMany({});
+        await DatabaseTokenModel.getModel().deleteMany({});
 
         // Create a valid token for tests
         const tokenResult = await TokenModel.create({ name: 'test-token' });
@@ -790,8 +786,8 @@ describe('ConfigurationModel', () => {
             it('should delete configurations for all users', async () => {
                 await ConfigurationModel.deleteAll(true);
 
-                const user1Configs = await DatabaseConfigurationModel.find({ userId: 'user1' });
-                const user2Configs = await DatabaseConfigurationModel.find({ userId: 'user2' });
+                const user1Configs = await DatabaseConfigurationModel.getModel().find({ userId: 'user1' });
+                const user2Configs = await DatabaseConfigurationModel.getModel().find({ userId: 'user2' });
 
                 expect(user1Configs).toHaveLength(0);
                 expect(user2Configs).toHaveLength(0);
@@ -800,7 +796,7 @@ describe('ConfigurationModel', () => {
             it('should delete all configurations regardless of key', async () => {
                 await ConfigurationModel.deleteAll(true);
 
-                const allConfigs = await DatabaseConfigurationModel.find({});
+                const allConfigs = await DatabaseConfigurationModel.getModel().find({});
                 expect(allConfigs).toHaveLength(0);
             });
         });

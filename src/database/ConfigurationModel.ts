@@ -30,7 +30,15 @@ configurationSchema.index(
 );
 
 
-export const ConfigurationModel = mongoose.model<ConfigurationDocumentInterface, ConfigurationModelInterface>(
+const configurationModel = mongoose.model<ConfigurationDocumentInterface, ConfigurationModelInterface>(
     'configuration',
     configurationSchema,
 );
+
+
+export default class ConfigurationModel {
+
+    public static getModel() {
+        return configurationModel;
+    }
+}
