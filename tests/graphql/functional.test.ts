@@ -803,6 +803,443 @@ describe('GraphQL API Functional Tests', () => {
         });
     });
 
+    describe('Mutation: deleteConfiguration', () => {
+        it('should successfully delete an existing configuration', async () => {
+            // Setup: Create a configuration
+            await ConfigurationModel.upsert(
+                { key: 'theme', userId: 'user123', value: { mode: 'dark' } },
+                false
+            );
+
+            const mutation = `
+                mutation DeleteConfiguration($key: String!, $userId: ID!) {
+                    deleteConfiguration(key: $key, userId: $userId)
+                }
+            `;
+
+            const response = await server.executeOperation(
+                {
+                    query: mutation,
+                    variables: {
+                        key: 'theme',
+                        userId: 'user123',
+                    },
+                },
+                {
+                    contextValue: contextMiddleware({
+                        headers: { authorization: `Bearer ${authorizationToken}` },
+                    } as any),
+                }
+            );
+
+            expect(response.body.kind).toBe('single');
+            if (response.body.kind === 'single') {
+                expect(response.body.singleResult.errors).toBeUndefined();
+                expect(response.body.singleResult.data?.deleteConfiguration).toBe(true);
+            }
+
+            // Verify the configuration was deleted
+            const configs = await ConfigurationModel.findByUserIdAndKeys(
+                { userId: 'user123', keys: ['theme'] },
+                false
+            );
+            expect(configs).toHaveLength(0);
+        });
+
+        it('should return true when deleting non-existent configuration', async () => {
+            const mutation = `
+                mutation DeleteConfiguration($key: String!, $userId: ID!) {
+                    deleteConfiguration(key: $key, userId: $userId)
+                }
+            `;
+
+            const response = await server.executeOperation(
+                {
+                    query: mutation,
+                    variables: {
+                        key: 'non-existent',
+                        userId: 'user123',
+                    },
+                },
+                {
+                    contextValue: contextMiddleware({
+                        headers: { authorization: `Bearer ${authorizationToken}` },
+                    } as any),
+                }
+            );
+
+            expect(response.body.kind).toBe('single');
+            if (response.body.kind === 'single') {
+                expect(response.body.singleResult.errors).toBeUndefined();
+                expect(response.body.singleResult.data?.deleteConfiguration).toBe(true);
+            }
+        });
+
+        it('should only delete the specific key-userId combination', async () => {
+            // Setup: Create multiple configurations
+            await ConfigurationModel.upsert(
+                { key: 'theme', userId: 'user123', value: { mode: 'dark' } },
+                false
+            );
+            await ConfigurationModel.upsert(
+                { key: 'theme', userId: 'user456', value: { mode: 'light' } },
+                false
+            );
+            await ConfigurationModel.upsert(
+                { key: 'language', userId: 'user123', value: { lang: 'en' } },
+                false
+            );
+
+            const mutation = `
+                mutation DeleteConfiguration($key: String!, $userId: ID!) {
+                    deleteConfiguration(key: $key, userId: $userId)
+                }
+            `;
+
+            const response = await server.executeOperation(
+                {
+                    query: mutation,
+                    variables: {
+                        key: 'theme',
+                        userId: 'user123',
+                    },
+                },
+                {
+                    contextValue: contextMiddleware({
+                        headers: { authorization: `Bearer ${authorizationToken}` },
+                    } as any),
+                }
+            );
+
+            expect(response.body.kind).toBe('single');
+            if (response.body.kind === 'single') {
+                expect(response.body.singleResult.errors).toBeUndefined();
+                expect(response.body.singleResult.data?.deleteConfiguration).toBe(true);
+            }
+
+            // Verify only the specific configuration was deleted
+            const user123Configs = await ConfigurationModel.findByUserIdAndKeys(
+                { userId: 'user123' },
+                false
+            );
+            expect(user123Configs).toHaveLength(1);
+            expect(user123Configs[0].key).toBe('language');
+
+            const user456Configs = await ConfigurationModel.findByUserIdAndKeys(
+                { userId: 'user456' },
+                false
+            );
+            expect(user456Configs).toHaveLength(1);
+            expect(user456Configs[0].key).toBe('theme');
+        });
+
+        it('should delete multiple times idempotently', async () => {
+            // Setup: Create a configuration
+            await ConfigurationModel.upsert(
+                { key: 'theme', userId: 'user123', value: { mode: 'dark' } },
+                false
+            );
+
+            const mutation = `
+                mutation DeleteConfiguration($key: String!, $userId: ID!) {
+                    deleteConfiguration(key: $key, userId: $userId)
+                }
+            `;
+
+            // First deletion
+            const response1 = await server.executeOperation(
+                {
+                    query: mutation,
+                    variables: { key: 'theme', userId: 'user123' },
+                },
+                {
+                    contextValue: contextMiddleware({
+                        headers: { authorization: `Bearer ${authorizationToken}` },
+                    } as any),
+                }
+            );
+
+            expect(response1.body.kind).toBe('single');
+            if (response1.body.kind === 'single') {
+                expect(response1.body.singleResult.data?.deleteConfiguration).toBe(true);
+            }
+
+            // Second deletion (should still succeed)
+            const response2 = await server.executeOperation(
+                {
+                    query: mutation,
+                    variables: { key: 'theme', userId: 'user123' },
+                },
+                {
+                    contextValue: contextMiddleware({
+                        headers: { authorization: `Bearer ${authorizationToken}` },
+                    } as any),
+                }
+            );
+
+            expect(response2.body.kind).toBe('single');
+            if (response2.body.kind === 'single') {
+                expect(response2.body.singleResult.data?.deleteConfiguration).toBe(true);
+            }
+        });
+
+        it('should fail without valid authorization token', async () => {
+            const mutation = `
+                mutation DeleteConfiguration($key: String!, $userId: ID!) {
+                    deleteConfiguration(key: $key, userId: $userId)
+                }
+            `;
+
+            const response = await server.executeOperation(
+                {
+                    query: mutation,
+                    variables: {
+                        key: 'theme',
+                        userId: 'user123',
+                    },
+                },
+                {
+                    contextValue: contextMiddleware({ headers: {} } as any),
+                }
+            );
+
+            expect(response.body.kind).toBe('single');
+            if (response.body.kind === 'single') {
+                expect(response.body.singleResult.errors).toBeDefined();
+            }
+        });
+
+        it('should fail with invalid authorization token', async () => {
+            const mutation = `
+                mutation DeleteConfiguration($key: String!, $userId: ID!) {
+                    deleteConfiguration(key: $key, userId: $userId)
+                }
+            `;
+
+            const response = await server.executeOperation(
+                {
+                    query: mutation,
+                    variables: {
+                        key: 'theme',
+                        userId: 'user123',
+                    },
+                },
+                {
+                    contextValue: contextMiddleware({
+                        headers: { authorization: 'Bearer invalid-token' },
+                    } as any),
+                }
+            );
+
+            expect(response.body.kind).toBe('single');
+            if (response.body.kind === 'single') {
+                expect(response.body.singleResult.errors).toBeDefined();
+            }
+        });
+
+        it('should fail with expired token', async () => {
+            // Create and immediately expire a token
+            const tokenResult = await TokenModel.create({ name: 'expired-delete-token' });
+            await TokenModel.expire({ name: tokenResult.token.name });
+
+            const mutation = `
+                mutation DeleteConfiguration($key: String!, $userId: ID!) {
+                    deleteConfiguration(key: $key, userId: $userId)
+                }
+            `;
+
+            const response = await server.executeOperation(
+                {
+                    query: mutation,
+                    variables: {
+                        key: 'theme',
+                        userId: 'user123',
+                    },
+                },
+                {
+                    contextValue: contextMiddleware({
+                        headers: { authorization: `Bearer ${tokenResult.authorizationToken}` },
+                    } as any),
+                }
+            );
+
+            expect(response.body.kind).toBe('single');
+            if (response.body.kind === 'single') {
+                expect(response.body.singleResult.errors).toBeDefined();
+            }
+        });
+
+        it('should fail with authorization token missing Bearer prefix', async () => {
+            const mutation = `
+                mutation DeleteConfiguration($key: String!, $userId: ID!) {
+                    deleteConfiguration(key: $key, userId: $userId)
+                }
+            `;
+
+            const response = await server.executeOperation(
+                {
+                    query: mutation,
+                    variables: {
+                        key: 'theme',
+                        userId: 'user123',
+                    },
+                },
+                {
+                    contextValue: contextMiddleware({
+                        headers: { authorization: authorizationToken },
+                    } as any),
+                }
+            );
+
+            expect(response.body.kind).toBe('single');
+            if (response.body.kind === 'single') {
+                expect(response.body.singleResult.errors).toBeDefined();
+            }
+        });
+
+        it('should fail with malformed authorization token', async () => {
+            const mutation = `
+                mutation DeleteConfiguration($key: String!, $userId: ID!) {
+                    deleteConfiguration(key: $key, userId: $userId)
+                }
+            `;
+
+            const response = await server.executeOperation(
+                {
+                    query: mutation,
+                    variables: {
+                        key: 'theme',
+                        userId: 'user123',
+                    },
+                },
+                {
+                    contextValue: contextMiddleware({
+                        headers: { authorization: 'Bearer not:a:valid:token:format' },
+                    } as any),
+                }
+            );
+
+            expect(response.body.kind).toBe('single');
+            if (response.body.kind === 'single') {
+                expect(response.body.singleResult.errors).toBeDefined();
+            }
+        });
+
+        it('should fail with token containing invalid HMAC', async () => {
+            // Create a token and tamper with it
+            const parts = authorizationToken.split(':');
+            const tamperedToken = `${parts[0]}:${parts[1]}:${parts[2]}:invalidhmac`;
+
+            const mutation = `
+                mutation DeleteConfiguration($key: String!, $userId: ID!) {
+                    deleteConfiguration(key: $key, userId: $userId)
+                }
+            `;
+
+            const response = await server.executeOperation(
+                {
+                    query: mutation,
+                    variables: {
+                        key: 'theme',
+                        userId: 'user123',
+                    },
+                },
+                {
+                    contextValue: contextMiddleware({
+                        headers: { authorization: `Bearer ${tamperedToken}` },
+                    } as any),
+                }
+            );
+
+            expect(response.body.kind).toBe('single');
+            if (response.body.kind === 'single') {
+                expect(response.body.singleResult.errors).toBeDefined();
+            }
+        });
+
+        it('should handle deletion of configurations with special characters in key', async () => {
+            // Setup: Create configurations with special characters
+            await ConfigurationModel.upsert(
+                { key: 'user@settings_config-123', userId: 'user123', value: { data: 'test' } },
+                false
+            );
+
+            const mutation = `
+                mutation DeleteConfiguration($key: String!, $userId: ID!) {
+                    deleteConfiguration(key: $key, userId: $userId)
+                }
+            `;
+
+            const response = await server.executeOperation(
+                {
+                    query: mutation,
+                    variables: {
+                        key: 'user@settings_config-123',
+                        userId: 'user123',
+                    },
+                },
+                {
+                    contextValue: contextMiddleware({
+                        headers: { authorization: `Bearer ${authorizationToken}` },
+                    } as any),
+                }
+            );
+
+            expect(response.body.kind).toBe('single');
+            if (response.body.kind === 'single') {
+                expect(response.body.singleResult.errors).toBeUndefined();
+                expect(response.body.singleResult.data?.deleteConfiguration).toBe(true);
+            }
+
+            const configs = await ConfigurationModel.findByUserIdAndKeys(
+                { userId: 'user123' },
+                false
+            );
+            expect(configs).toHaveLength(0);
+        });
+
+        it('should handle deletion with special characters in userId', async () => {
+            // Setup: Create configurations with special characters in userId
+            await ConfigurationModel.upsert(
+                { key: 'theme', userId: 'user@domain.com', value: { data: 'test' } },
+                false
+            );
+
+            const mutation = `
+                mutation DeleteConfiguration($key: String!, $userId: ID!) {
+                    deleteConfiguration(key: $key, userId: $userId)
+                }
+            `;
+
+            const response = await server.executeOperation(
+                {
+                    query: mutation,
+                    variables: {
+                        key: 'theme',
+                        userId: 'user@domain.com',
+                    },
+                },
+                {
+                    contextValue: contextMiddleware({
+                        headers: { authorization: `Bearer ${authorizationToken}` },
+                    } as any),
+                }
+            );
+
+            expect(response.body.kind).toBe('single');
+            if (response.body.kind === 'single') {
+                expect(response.body.singleResult.errors).toBeUndefined();
+                expect(response.body.singleResult.data?.deleteConfiguration).toBe(true);
+            }
+
+            const configs = await ConfigurationModel.findByUserIdAndKeys(
+                { userId: 'user@domain.com' },
+                false
+            );
+            expect(configs).toHaveLength(0);
+        });
+    });
+
     describe('Integration Scenarios', () => {
         it('should handle complete workflow: create, update, query', async () => {
             // Step 1: Create a configuration

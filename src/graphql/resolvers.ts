@@ -4,6 +4,7 @@ import ConfigurationsResolverArgsInterface from './types/ConfigurationsResolverA
 import UpsertConfigurationResolverArgsInterface from './types/UpsertConfigurationResolverArgsInterface';
 import ResolverContextInterface from './types/ResolverContextInterface';
 import handleError from './handleError';
+import DeleteConfigurationResolverArgsInterface from './types/DeleteConfigurationResolverArgsInterface';
 
 const resolvers = {
     JSON: GraphQLJSON,
@@ -39,6 +40,22 @@ const resolvers = {
                         true,
                         context.authorizationToken
                     );
+            } catch (error) {
+                handleError(error);
+            }
+        },
+        async deleteConfiguration(
+            _parent: unknown,
+            args: DeleteConfigurationResolverArgsInterface,
+            context: ResolverContextInterface
+        ) {
+            try {
+                await ConfigurationModel.deleteByKeyAndUserId(
+                    { key: args.key, userId: args.userId },
+                    true,
+                    context.authorizationToken
+                );
+                return true;
             } catch (error) {
                 handleError(error);
             }

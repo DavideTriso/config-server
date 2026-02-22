@@ -802,6 +802,383 @@ describe('ConfigurationModel', () => {
         });
     });
 
+    describe('deleteByKey', () => {
+        beforeEach(async () => {
+            // Create test data
+            await ConfigurationModel.upsert(
+                { key: 'key1', userId: 'user1', value: { data: 'data1' } },
+                false,
+                null
+            );
+            await ConfigurationModel.upsert(
+                { key: 'key1', userId: 'user2', value: { data: 'data2' } },
+                false,
+                null
+            );
+            await ConfigurationModel.upsert(
+                { key: 'key2', userId: 'user1', value: { data: 'data3' } },
+                false,
+                null
+            );
+            await ConfigurationModel.upsert(
+                { key: 'key2', userId: 'user3', value: { data: 'data4' } },
+                false,
+                null
+            );
+        });
+
+        describe('with authorization', () => {
+            it('should delete all configurations with matching key across all users', async () => {
+                await ConfigurationModel.deleteByKey({ key: 'key1' }, true, validAuthToken);
+
+                const remainingConfigs = await DatabaseConfigurationModel.getModel().find({});
+                expect(remainingConfigs).toHaveLength(2);
+                expect(remainingConfigs.every(c => c.key !== 'key1')).toBe(true);
+            });
+
+            it('should not affect configurations with different keys', async () => {
+                await ConfigurationModel.deleteByKey({ key: 'key1' }, true, validAuthToken);
+
+                const key2Configs = await DatabaseConfigurationModel.getModel().find({ key: 'key2' });
+                expect(key2Configs).toHaveLength(2);
+            });
+
+            it('should handle deletion of non-existent key gracefully', async () => {
+                await ConfigurationModel.deleteByKey({ key: 'non-existent' }, true, validAuthToken);
+
+                const allConfigs = await DatabaseConfigurationModel.getModel().find({});
+                expect(allConfigs).toHaveLength(4);
+            });
+
+            it('should throw UnauthorizedError with invalid token', async () => {
+                await expect(
+                    ConfigurationModel.deleteByKey({ key: 'key1' }, true, 'invalid-token')
+                ).rejects.toThrow(UnauthorizedError);
+
+                // Verify nothing was deleted
+                const allConfigs = await DatabaseConfigurationModel.getModel().find({});
+                expect(allConfigs).toHaveLength(4);
+            });
+
+            it('should throw UnauthorizedError with null token', async () => {
+                await expect(
+                    ConfigurationModel.deleteByKey({ key: 'key1' }, true, null)
+                ).rejects.toThrow(UnauthorizedError);
+            });
+
+            it('should throw UnauthorizedError with expired token', async () => {
+                await TokenModel.expire({ name: validTokenName });
+
+                await expect(
+                    ConfigurationModel.deleteByKey({ key: 'key1' }, true, validAuthToken)
+                ).rejects.toThrow(UnauthorizedError);
+            });
+        });
+
+        describe('without authorization', () => {
+            it('should delete configurations without token when checkAuthorization is false', async () => {
+                await ConfigurationModel.deleteByKey({ key: 'key1' }, false, null);
+
+                const remainingConfigs = await DatabaseConfigurationModel.getModel().find({});
+                expect(remainingConfigs).toHaveLength(2);
+                expect(remainingConfigs.every(c => c.key !== 'key1')).toBe(true);
+            });
+
+            it('should work without token even when provided', async () => {
+                await ConfigurationModel.deleteByKey({ key: 'key2' }, false, validAuthToken);
+
+                const key2Configs = await DatabaseConfigurationModel.getModel().find({ key: 'key2' });
+                expect(key2Configs).toHaveLength(0);
+            });
+        });
+    });
+
+    describe('deleteByUserId', () => {
+        beforeEach(async () => {
+            // Create test data
+            await ConfigurationModel.upsert(
+                { key: 'key1', userId: 'user1', value: { data: 'data1' } },
+                false,
+                null
+            );
+            await ConfigurationModel.upsert(
+                { key: 'key2', userId: 'user1', value: { data: 'data2' } },
+                false,
+                null
+            );
+            await ConfigurationModel.upsert(
+                { key: 'key3', userId: 'user1', value: { data: 'data3' } },
+                false,
+                null
+            );
+            await ConfigurationModel.upsert(
+                { key: 'key1', userId: 'user2', value: { data: 'data4' } },
+                false,
+                null
+            );
+            await ConfigurationModel.upsert(
+                { key: 'key2', userId: 'user3', value: { data: 'data5' } },
+                false,
+                null
+            );
+        });
+
+        describe('with authorization', () => {
+            it('should delete all configurations for a specific user', async () => {
+                await ConfigurationModel.deleteByUserId({ userId: 'user1' }, true, validAuthToken);
+
+                const user1Configs = await DatabaseConfigurationModel.getModel().find({ userId: 'user1' });
+                expect(user1Configs).toHaveLength(0);
+
+                const remainingConfigs = await DatabaseConfigurationModel.getModel().find({});
+                expect(remainingConfigs).toHaveLength(2);
+            });
+
+            it('should not affect configurations of other users', async () => {
+                await ConfigurationModel.deleteByUserId({ userId: 'user1' }, true, validAuthToken);
+
+                const user2Configs = await DatabaseConfigurationModel.getModel().find({ userId: 'user2' });
+                const user3Configs = await DatabaseConfigurationModel.getModel().find({ userId: 'user3' });
+
+                expect(user2Configs).toHaveLength(1);
+                expect(user3Configs).toHaveLength(1);
+            });
+
+            it('should handle deletion of non-existent user gracefully', async () => {
+                await ConfigurationModel.deleteByUserId({ userId: 'non-existent-user' }, true, validAuthToken);
+
+                const allConfigs = await DatabaseConfigurationModel.getModel().find({});
+                expect(allConfigs).toHaveLength(5);
+            });
+
+            it('should delete all keys for the specified user', async () => {
+                await ConfigurationModel.deleteByUserId({ userId: 'user1' }, true, validAuthToken);
+
+                const remainingConfigs = await DatabaseConfigurationModel.getModel().find({});
+                const remainingKeys = remainingConfigs.map(c => c.key);
+
+                expect(remainingKeys).toContain('key1');
+                expect(remainingKeys).toContain('key2');
+                // But none should belong to user1
+                expect(remainingConfigs.every(c => c.userId !== 'user1')).toBe(true);
+            });
+
+            it('should throw UnauthorizedError with invalid token', async () => {
+                await expect(
+                    ConfigurationModel.deleteByUserId({ userId: 'user1' }, true, 'invalid-token')
+                ).rejects.toThrow(UnauthorizedError);
+
+                const allConfigs = await DatabaseConfigurationModel.getModel().find({});
+                expect(allConfigs).toHaveLength(5);
+            });
+
+            it('should throw UnauthorizedError with null token', async () => {
+                await expect(
+                    ConfigurationModel.deleteByUserId({ userId: 'user1' }, true, null)
+                ).rejects.toThrow(UnauthorizedError);
+            });
+
+            it('should throw UnauthorizedError with expired token', async () => {
+                await TokenModel.expire({ name: validTokenName });
+
+                await expect(
+                    ConfigurationModel.deleteByUserId({ userId: 'user1' }, true, validAuthToken)
+                ).rejects.toThrow(UnauthorizedError);
+            });
+        });
+
+        describe('without authorization', () => {
+            it('should delete configurations without token when checkAuthorization is false', async () => {
+                await ConfigurationModel.deleteByUserId({ userId: 'user1' }, false, null);
+
+                const user1Configs = await DatabaseConfigurationModel.getModel().find({ userId: 'user1' });
+                expect(user1Configs).toHaveLength(0);
+
+                const remainingConfigs = await DatabaseConfigurationModel.getModel().find({});
+                expect(remainingConfigs).toHaveLength(2);
+            });
+
+            it('should work without token even when provided', async () => {
+                await ConfigurationModel.deleteByUserId({ userId: 'user2' }, false, validAuthToken);
+
+                const user2Configs = await DatabaseConfigurationModel.getModel().find({ userId: 'user2' });
+                expect(user2Configs).toHaveLength(0);
+            });
+        });
+    });
+
+    describe('deleteByKeyAndUserId', () => {
+        beforeEach(async () => {
+            // Create test data
+            await ConfigurationModel.upsert(
+                { key: 'key1', userId: 'user1', value: { data: 'data1' } },
+                false,
+                null
+            );
+            await ConfigurationModel.upsert(
+                { key: 'key2', userId: 'user1', value: { data: 'data2' } },
+                false,
+                null
+            );
+            await ConfigurationModel.upsert(
+                { key: 'key1', userId: 'user2', value: { data: 'data3' } },
+                false,
+                null
+            );
+            await ConfigurationModel.upsert(
+                { key: 'key2', userId: 'user2', value: { data: 'data4' } },
+                false,
+                null
+            );
+        });
+
+        describe('with authorization', () => {
+            it('should delete only the configuration matching both key and userId', async () => {
+                await ConfigurationModel.deleteByKeyAndUserId(
+                    { key: 'key1', userId: 'user1' },
+                    true,
+                    validAuthToken
+                );
+
+                const deletedConfig = await DatabaseConfigurationModel.getModel().findOne({
+                    key: 'key1',
+                    userId: 'user1'
+                });
+                expect(deletedConfig).toBeNull();
+
+                const remainingConfigs = await DatabaseConfigurationModel.getModel().find({});
+                expect(remainingConfigs).toHaveLength(3);
+            });
+
+            it('should not delete configurations with same key but different userId', async () => {
+                await ConfigurationModel.deleteByKeyAndUserId(
+                    { key: 'key1', userId: 'user1' },
+                    true,
+                    validAuthToken
+                );
+
+                const user2Key1 = await DatabaseConfigurationModel.getModel().findOne({
+                    key: 'key1',
+                    userId: 'user2'
+                });
+                expect(user2Key1).toBeDefined();
+                expect(user2Key1?.value).toEqual({ data: 'data3' });
+            });
+
+            it('should not delete configurations with same userId but different key', async () => {
+                await ConfigurationModel.deleteByKeyAndUserId(
+                    { key: 'key1', userId: 'user1' },
+                    true,
+                    validAuthToken
+                );
+
+                const user1Key2 = await DatabaseConfigurationModel.getModel().findOne({
+                    key: 'key2',
+                    userId: 'user1'
+                });
+                expect(user1Key2).toBeDefined();
+                expect(user1Key2?.value).toEqual({ data: 'data2' });
+            });
+
+            it('should handle deletion of non-existent combination gracefully', async () => {
+                await ConfigurationModel.deleteByKeyAndUserId(
+                    { key: 'non-existent', userId: 'user1' },
+                    true,
+                    validAuthToken
+                );
+
+                const allConfigs = await DatabaseConfigurationModel.getModel().find({});
+                expect(allConfigs).toHaveLength(4);
+            });
+
+            it('should delete only exact match when multiple similar configurations exist', async () => {
+                await ConfigurationModel.deleteByKeyAndUserId(
+                    { key: 'key1', userId: 'user2' },
+                    true,
+                    validAuthToken
+                );
+
+                const allConfigs = await DatabaseConfigurationModel.getModel().find({});
+                expect(allConfigs).toHaveLength(3);
+
+                const user1Configs = await DatabaseConfigurationModel.getModel().find({ userId: 'user1' });
+                expect(user1Configs).toHaveLength(2);
+
+                const key1Configs = await DatabaseConfigurationModel.getModel().find({ key: 'key1' });
+                expect(key1Configs).toHaveLength(1);
+                expect(key1Configs[0].userId).toBe('user1');
+            });
+
+            it('should throw UnauthorizedError with invalid token', async () => {
+                await expect(
+                    ConfigurationModel.deleteByKeyAndUserId(
+                        { key: 'key1', userId: 'user1' },
+                        true,
+                        'invalid-token'
+                    )
+                ).rejects.toThrow(UnauthorizedError);
+
+                const allConfigs = await DatabaseConfigurationModel.getModel().find({});
+                expect(allConfigs).toHaveLength(4);
+            });
+
+            it('should throw UnauthorizedError with null token', async () => {
+                await expect(
+                    ConfigurationModel.deleteByKeyAndUserId(
+                        { key: 'key1', userId: 'user1' },
+                        true,
+                        null
+                    )
+                ).rejects.toThrow(UnauthorizedError);
+            });
+
+            it('should throw UnauthorizedError with expired token', async () => {
+                await TokenModel.expire({ name: validTokenName });
+
+                await expect(
+                    ConfigurationModel.deleteByKeyAndUserId(
+                        { key: 'key1', userId: 'user1' },
+                        true,
+                        validAuthToken
+                    )
+                ).rejects.toThrow(UnauthorizedError);
+            });
+        });
+
+        describe('without authorization', () => {
+            it('should delete configuration without token when checkAuthorization is false', async () => {
+                await ConfigurationModel.deleteByKeyAndUserId(
+                    { key: 'key1', userId: 'user1' },
+                    false,
+                    null
+                );
+
+                const deletedConfig = await DatabaseConfigurationModel.getModel().findOne({
+                    key: 'key1',
+                    userId: 'user1'
+                });
+                expect(deletedConfig).toBeNull();
+
+                const remainingConfigs = await DatabaseConfigurationModel.getModel().find({});
+                expect(remainingConfigs).toHaveLength(3);
+            });
+
+            it('should work without token even when provided', async () => {
+                await ConfigurationModel.deleteByKeyAndUserId(
+                    { key: 'key2', userId: 'user2' },
+                    false,
+                    validAuthToken
+                );
+
+                const deletedConfig = await DatabaseConfigurationModel.getModel().findOne({
+                    key: 'key2',
+                    userId: 'user2'
+                });
+                expect(deletedConfig).toBeNull();
+            });
+        });
+    });
+
     describe('Integration Tests', () => {
         it('should support complete configuration lifecycle', async () => {
             // Create

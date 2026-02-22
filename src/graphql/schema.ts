@@ -17,6 +17,7 @@ const typeDefs = gql`
 
   type Mutation {
     upsertConfiguration(key: String!, userId: ID!, value: JSON!): Configuration!
+    deleteConfiguration(key: String!, userId: ID!): Boolean!
   }
 `;
 

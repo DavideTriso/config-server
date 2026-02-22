@@ -52,6 +52,44 @@ export default class ConfigurationModel {
         await DatabaseConfigurationModel.getModel().deleteMany({});
     }
 
+    public static async deleteByKey(
+        filters: { key: string },
+        checkAuthorization: boolean = true,
+        authorizationToken: string | null = null
+    ): Promise<void> {
+        if (checkAuthorization) {
+            await TokenModel.checkAuthorization(authorizationToken);
+        }
+
+        await DatabaseConfigurationModel.getModel().deleteMany({ key: filters.key });
+    }
+
+    public static async deleteByUserId(
+        filters: { userId: string },
+        checkAuthorization: boolean = true,
+        authorizationToken: string | null = null
+    ): Promise<void> {
+        if (checkAuthorization) {
+            await TokenModel.checkAuthorization(authorizationToken);
+        }
+
+        await DatabaseConfigurationModel.getModel().deleteMany({ userId: filters.userId });
+    }
+
+    public static async deleteByKeyAndUserId(
+        filters: { key: string, userId: string },
+        checkAuthorization: boolean = true,
+        authorizationToken: string | null = null
+    ): Promise<void> {
+        if (checkAuthorization) {
+            await TokenModel.checkAuthorization(authorizationToken);
+        }
+
+        await DatabaseConfigurationModel
+            .getModel()
+            .deleteMany({ key: filters.key, userId: filters.userId });
+    }
+
     public static async findByUserIdAndKeys(
         filters: { userId: string, keys?: string[] },
         checkAuthorization: boolean = true,
