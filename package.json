@@ -9,6 +9,7 @@
         "dev": "ts-node index.ts",
         "seeder": "ts-node src/cli/seeder.ts",
         "token-manager": "ts-node src/cli/token-manager.ts",
+        "configuration-manager": "ts-node src/cli/configuration-manager.ts",
         "test": "jest",
         "clean": "rm -rf dist"
     },
