@@ -41,13 +41,9 @@ function generateUpsertConfigurationInput(userId: string, key: string): UpsertCo
     }
 }
 function generateUpsertConfigurationInputs(): UpsertConfigurationInputInterface[] {
-    return [
-        ...userIdsArray.map(userId => generateUpsertConfigurationInput(userId, 'key1')),
-        ...userIdsArray.map(userId => generateUpsertConfigurationInput(userId, 'key2')),
-        ...userIdsArray.map(userId => generateUpsertConfigurationInput(userId, 'key3')),
-        ...userIdsArray.map(userId => generateUpsertConfigurationInput(userId, 'key4')),
-        ...userIdsArray.map(userId => generateUpsertConfigurationInput(userId, 'key5')),
-    ];
+    return Array
+        .from({ length: 20 }, (_, index: number) => `key_${index + 1}`)
+        .flatMap(key => userIdsArray.map(userId => generateUpsertConfigurationInput(userId, key)));
 }
 
 export default async function seedConfigurations(): Promise<void> {
