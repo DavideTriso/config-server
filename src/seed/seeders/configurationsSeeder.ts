@@ -1,7 +1,8 @@
 import { faker } from '@faker-js/faker';
 import UpsertConfigurationInputInterface from "../../model/types/UpsertConfigurationInputInterface";
 import ConfigurationModel from '../../model/ConfigurationModel';
-import Users from '../../model/constants/Users';
+
+const userIdsArray = Array.from({ length: 1000 }, () => faker.string.uuid());
 
 function generateRandomValue(): string | boolean | number | string[] {
     const valueType = faker.helpers.arrayElement([1, 2, 3, 4]);
@@ -32,25 +33,27 @@ function generateRandomValueObj(nestingLevel: number = 0): Record<string, string
     return obj;
 }
 
-
-function generateUpsertConfigurationInput(): UpsertConfigurationInputInterface {
-
+function generateUpsertConfigurationInput(userId: string, key: string): UpsertConfigurationInputInterface {
     return {
-        key: faker.string.alpha({ length: { min: 5, max: 20 } }),
-        userId: faker.string.uuid(),
+        key: key,
+        userId: userId,
         value: generateRandomValueObj(),
     }
 }
-
-function generateUpsertConfigurationInputs(count: number): UpsertConfigurationInputInterface[] {
-    return Array.from({ length: count }, () => generateUpsertConfigurationInput());
-
+function generateUpsertConfigurationInputs(): UpsertConfigurationInputInterface[] {
+    return [
+        ...userIdsArray.map(userId => generateUpsertConfigurationInput(userId, 'key1')),
+        ...userIdsArray.map(userId => generateUpsertConfigurationInput(userId, 'key2')),
+        ...userIdsArray.map(userId => generateUpsertConfigurationInput(userId, 'key3')),
+        ...userIdsArray.map(userId => generateUpsertConfigurationInput(userId, 'key4')),
+        ...userIdsArray.map(userId => generateUpsertConfigurationInput(userId, 'key5')),
+    ];
 }
 
 export default async function seedConfigurations(): Promise<void> {
     await ConfigurationModel.deleteAll(true);
 
-    const upsertConfigurationInputs = generateUpsertConfigurationInputs(5000);
+    const upsertConfigurationInputs = generateUpsertConfigurationInputs();
 
     await Promise.all(
         upsertConfigurationInputs.map(async (upsertConfigurationInput) => {
