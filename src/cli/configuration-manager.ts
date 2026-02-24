@@ -10,7 +10,7 @@ program.name('configuration-manager').description('CLI for managing configuratio
 
 program
     .command('delete')
-    .description('Delete an existing configuration')
+    .description('Delete existing configuration(s)')
     .option('-k, --key <key>', 'Key of the configuration(s) to delete')
     .option('-u, --userId <userId>', 'User ID of the configuration(s) to delete')
     .action(async (options: { key?: string; userId?: string }): Promise<void> => {

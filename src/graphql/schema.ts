@@ -4,8 +4,8 @@ const typeDefs = gql`
   scalar JSON
 
   type Configuration {
-    key: String!
-    userId: String!
+    key: ID!
+    userId: ID!
     value: JSON!
     createdOnDateTime: String
     lastUpdatedOnDateTime: String

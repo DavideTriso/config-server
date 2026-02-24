@@ -36,7 +36,7 @@ describe('GraphQL API Functional Tests', () => {
         await ConfigurationModel.deleteAll(true);
 
         // Create a valid token for authenticated requests
-        const tokenResult = await TokenModel.create({ name: 'test-token' });
+        const tokenResult = await TokenModel.create({ name: 'test-token' }, true);
         authorizationToken = tokenResult.authorizationToken;
     });
 
@@ -388,8 +388,8 @@ describe('GraphQL API Functional Tests', () => {
 
         it('should fail with expired token', async () => {
             // Create and immediately expire a token
-            const tokenResult = await TokenModel.create({ name: 'expired-token' });
-            await TokenModel.expire({ name: tokenResult.token.name });
+            const tokenResult = await TokenModel.create({ name: 'expired-token' }, true);
+            await TokenModel.expire({ name: tokenResult.token.name }, true);
 
             const query = `
                 query GetConfigurations($userId: ID!) {
@@ -668,8 +668,8 @@ describe('GraphQL API Functional Tests', () => {
 
         it('should fail with expired token', async () => {
             // Create and immediately expire a token
-            const tokenResult = await TokenModel.create({ name: 'mutation-expired-token' });
-            await TokenModel.expire({ name: tokenResult.token.name });
+            const tokenResult = await TokenModel.create({ name: 'mutation-expired-token' }, true);
+            await TokenModel.expire({ name: tokenResult.token.name }, true);
 
             const mutation = `
                 mutation UpsertConfiguration($key: String!, $userId: ID!, $value: JSON!) {
@@ -1039,8 +1039,8 @@ describe('GraphQL API Functional Tests', () => {
 
         it('should fail with expired token', async () => {
             // Create and immediately expire a token
-            const tokenResult = await TokenModel.create({ name: 'expired-delete-token' });
-            await TokenModel.expire({ name: tokenResult.token.name });
+            const tokenResult = await TokenModel.create({ name: 'expired-delete-token' }, true);
+            await TokenModel.expire({ name: tokenResult.token.name }, true);
 
             const mutation = `
                 mutation DeleteConfiguration($key: String!, $userId: ID!) {
@@ -1423,7 +1423,7 @@ describe('GraphQL API Functional Tests', () => {
 
         it('should work with different authorization tokens', async () => {
             // Create a second token
-            const token2Result = await TokenModel.create({ name: 'second-token' });
+            const token2Result = await TokenModel.create({ name: 'second-token' }, true);
             const token2 = token2Result.authorizationToken;
 
             const mutation = `

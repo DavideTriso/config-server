@@ -19,7 +19,14 @@ export default class TokenModel {
 
     private static readonly saltRounds: number = 10;
 
-    public static async create(input: CreateTokenInputInterface): Promise<CreateTokenResultType> {
+    public static async create(
+        input: CreateTokenInputInterface,
+        iAmAwareThisIsAnInternalMethod: boolean
+    ): Promise<CreateTokenResultType> {
+        if (!iAmAwareThisIsAnInternalMethod) {
+            throw new InternalServerError("This method is internal.");
+        }
+
         TokenValidator.validateCreateTokenInput(input);
 
         const unhashedPassword = this.generatePassword();
@@ -33,7 +40,7 @@ export default class TokenModel {
         }
 
         try {
-            const token = await DatabaseTokenModel.getModel().create(_input);
+            const token = await DatabaseTokenModel.getModel().insertOne(_input);
             const authorizationToken = this.generateAuthorizationToken(token, unhashedPassword);
             return { authorizationToken, token };
         } catch (error: any) {
@@ -44,7 +51,14 @@ export default class TokenModel {
         }
     }
 
-    public static async expire(input: ExpireTokenInputInterface): Promise<TokenInterface | null> {
+    public static async expire(
+        input: ExpireTokenInputInterface,
+        iAmAwareThisIsAnInternalMethod: boolean
+    ): Promise<TokenInterface | null> {
+        if (!iAmAwareThisIsAnInternalMethod) {
+            throw new InternalServerError("This method is internal.");
+        }
+
         return DatabaseTokenModel
             .getModel()
             .findOneAndUpdate(
@@ -57,19 +71,67 @@ export default class TokenModel {
                 },
                 { returnDocument: 'after' }
             )
-            .lean();
+            .lean<TokenInterface | null>();
     }
 
     /**
      * @internal
      * @throws InternalServerError if called without the exact argument to prevent accidental misuse.
      */
-    public static async deleteAll(iAmAwareThisIsAnInternalMethod: boolean): Promise<void> {
+    public static async delete(
+        filters: { name: string },
+        iAmAwareThisIsAnInternalMethod: boolean
+    ): Promise<boolean> {
         if (!iAmAwareThisIsAnInternalMethod) {
             throw new InternalServerError("This method is internal.");
         }
 
-        await DatabaseTokenModel.getModel().deleteMany({});
+        const result = await DatabaseTokenModel
+            .getModel()
+            .deleteOne({ name: filters.name, expired: true });
+        return result.acknowledged && result.deletedCount === 1;
+    }
+
+    /**
+    * @internal
+    * @throws InternalServerError if called without the exact argument to prevent accidental misuse.
+    */
+    public static async deleteAll(iAmAwareThisIsAnInternalMethod: boolean): Promise<boolean> {
+        if (!iAmAwareThisIsAnInternalMethod) {
+            throw new InternalServerError("This method is internal.");
+        }
+
+        const result = await DatabaseTokenModel.getModel().deleteMany({});
+        return result.acknowledged;
+    }
+
+    /**
+     * @internal
+     * @throws InternalServerError if called without the exact argument to prevent accidental misuse.
+     */
+    public static async deleteAllExpired(iAmAwareThisIsAnInternalMethod: boolean): Promise<boolean> {
+        if (!iAmAwareThisIsAnInternalMethod) {
+            throw new InternalServerError("This method is internal.");
+        }
+
+        const result = await DatabaseTokenModel.getModel().deleteMany({ expired: true });
+        return result.acknowledged;
+    }
+
+    /**
+    * @internal
+    * @throws InternalServerError if called without the exact argument to prevent accidental misuse.
+    */
+    public static async findAll(iAmAwareThisIsAnInternalMethod: boolean): Promise<TokenInterface[]> {
+        if (!iAmAwareThisIsAnInternalMethod) {
+            throw new InternalServerError("This method is internal.");
+        }
+
+        return await DatabaseTokenModel
+            .getModel()
+            .find({})
+            .sort({ expiredOnDateTime: 1 })
+            .lean<TokenInterface[]>();
     }
 
     private static async findByName(filters: { name: string, expired: boolean }): Promise<TokenInterface | null> {

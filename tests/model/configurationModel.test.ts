@@ -28,7 +28,7 @@ describe('ConfigurationModel', () => {
         await DatabaseTokenModel.getModel().deleteMany({});
 
         // Create a valid token for tests
-        const tokenResult = await TokenModel.create({ name: 'test-token' });
+        const tokenResult = await TokenModel.create({ name: 'test-token' }, true);
         validAuthToken = tokenResult.authorizationToken;
         validTokenName = tokenResult.token.name;
     });
@@ -112,7 +112,7 @@ describe('ConfigurationModel', () => {
                     value: { setting1: 'value1' }
                 };
 
-                await TokenModel.expire({ name: validTokenName });
+                await TokenModel.expire({ name: validTokenName }, true);
 
                 await expect(
                     ConfigurationModel.upsert(input, true, validAuthToken)
@@ -120,7 +120,7 @@ describe('ConfigurationModel', () => {
             });
 
             it('should set createdBy from token name', async () => {
-                const customToken = await TokenModel.create({ name: 'custom-user' });
+                const customToken = await TokenModel.create({ name: 'custom-user' }, true);
 
                 const input = {
                     key: 'test-key',
@@ -135,8 +135,8 @@ describe('ConfigurationModel', () => {
             });
 
             it('should track different updaters', async () => {
-                const token1 = await TokenModel.create({ name: 'user1' });
-                const token2 = await TokenModel.create({ name: 'user2' });
+                const token1 = await TokenModel.create({ name: 'user1' }, true);
+                const token2 = await TokenModel.create({ name: 'user2' }, true);
 
                 const input = {
                     key: 'test-key',
@@ -531,8 +531,8 @@ describe('ConfigurationModel', () => {
             });
 
             it('should not change createdBy on update', async () => {
-                const token1 = await TokenModel.create({ name: 'creator' });
-                const token2 = await TokenModel.create({ name: 'updater' });
+                const token1 = await TokenModel.create({ name: 'creator' }, true);
+                const token2 = await TokenModel.create({ name: 'updater' }, true);
 
                 const input = {
                     key: 'test-key',
@@ -673,7 +673,7 @@ describe('ConfigurationModel', () => {
             });
 
             it('should throw UnauthorizedError with expired token', async () => {
-                await TokenModel.expire({ name: validTokenName });
+                await TokenModel.expire({ name: validTokenName }, true);
 
                 await expect(
                     ConfigurationModel.findByUserIdAndKeys(
@@ -867,7 +867,7 @@ describe('ConfigurationModel', () => {
             });
 
             it('should throw UnauthorizedError with expired token', async () => {
-                await TokenModel.expire({ name: validTokenName });
+                await TokenModel.expire({ name: validTokenName }, true);
 
                 await expect(
                     ConfigurationModel.deleteByKey({ key: 'key1' }, true, validAuthToken)
@@ -979,7 +979,7 @@ describe('ConfigurationModel', () => {
             });
 
             it('should throw UnauthorizedError with expired token', async () => {
-                await TokenModel.expire({ name: validTokenName });
+                await TokenModel.expire({ name: validTokenName }, true);
 
                 await expect(
                     ConfigurationModel.deleteByUserId({ userId: 'user1' }, true, validAuthToken)
@@ -1133,7 +1133,7 @@ describe('ConfigurationModel', () => {
             });
 
             it('should throw UnauthorizedError with expired token', async () => {
-                await TokenModel.expire({ name: validTokenName });
+                await TokenModel.expire({ name: validTokenName }, true);
 
                 await expect(
                     ConfigurationModel.deleteByKeyAndUserId(
@@ -1219,8 +1219,8 @@ describe('ConfigurationModel', () => {
         });
 
         it('should handle multiple users independently', async () => {
-            const token1 = await TokenModel.create({ name: 'user1-token' });
-            const token2 = await TokenModel.create({ name: 'user2-token' });
+            const token1 = await TokenModel.create({ name: 'user1-token' }, true);
+            const token2 = await TokenModel.create({ name: 'user2-token' }, true);
 
             await ConfigurationModel.upsert(
                 { key: 'shared-key', userId: 'user1', value: { user: 1 } },
@@ -1322,7 +1322,7 @@ describe('ConfigurationModel', () => {
             );
 
             // Expire the token
-            await TokenModel.expire({ name: validTokenName });
+            await TokenModel.expire({ name: validTokenName }, true);
 
             // Operations requiring authorization should fail
             await expect(
