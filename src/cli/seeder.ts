@@ -6,11 +6,11 @@ import { program } from 'commander';
 import seed from '../seed/seed';
 import DatabaseConnection from '../database/DatabaseConnection';
 
-program.name('seeder').description('CLI for seeding the database with initial data').version('1.0.0');
+program.name('seeder').description('CLI for seeding the database with initial test data').version('1.0.0');
 
 program
     .command('seed')
-    .description('Seed the database with initial data')
+    .description('Seed the database with initial test data')
     .action(async (): Promise<void> => {
         try {
             console.log('Starting database seeding...');
