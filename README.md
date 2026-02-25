@@ -1,345 +1,112 @@
 # Config Server
 
-A GraphQL-based configuration server for storing user UI settings and preferences, such as theme preferences (light/dark mode), language settings, and other user-specific configurations.
+A lightweight configuration management service that enables front-end applications to manage non-sensitive user-specific configurations through a GraphQL API. Ideal for persisting UI preferences, theme choices, and personalized application state across sessions and devices.
 
-## Features
+Configurations are uniquely identified by a combination of `userId` and `key`. Each user can maintain multiple configurations for different purposes.
 
-- **GraphQL API** with Apollo Server
-- **MongoDB persistence** with Mongoose ODM and connection pooling
-- **Token-based authentication**
-- **CLI for token management**
-- **Configuration management** by key and user ID
-- **Upsert operations** for seamless config updates
+## Getting Started
 
-## Tech Stack
+//TODO
 
-- **Node.js** - Runtime environment
-- **Apollo Server** - GraphQL server
-- **MongoDB** - Document database
-- **Mongoose** - MongoDB ODM with connection pooling
-- **Express** - Web framework
-- **Commander.js** - CLI framework
+## Authorization
 
-## Installation
+The system implements a token-based authorization mechanism. Clients must include a valid token in the `Authorization` header of their requests with the format `Bearer <token>`.
 
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Copy environment configuration:
-   ```bash
-   cp .env.example .env
-   ```
-4. Update `.env` with your MongoDB connection string and other settings
-5. Start the server:
-   ```bash
-   npm start
-   ```
+Tokens are valid system-wide and grant access to all configurations. They are designed for simplicity and ease of use, without user-specific permissions or scopes, making them ideal for internal applications or trusted clients. 
 
-The server will be available at `http://localhost:4000/graphql`
+> NOTE: since tokens grant access to all configurations, they should be treated as sensitive credentials and stored securely. Only share tokens with trusted parties and avoid exposing them in client-side code or public repositories.
 
-## Docker Development Environment
-
-You can run the application in a containerized development environment using Docker Compose.
-
-### Prerequisites
-
-- Docker Engine installed on your system
-- Docker Compose v2.0 or higher
-
-### Starting the Services
-
-To start both the application and MongoDB in development mode:
-
-```bash
-docker compose -f docker-compose.dev.yaml up
+For example:
+```
+Authorization: Bearer abcdecHJvdmE=:ZTgyM2E4NWU0MTAxYmZlNWJiMWJmMDRlNjhiODE1ODk0N2IxMWYxNDY4YWMyNDk0OGQ5MjY3NTU4ZGFjNWY1NDY0MjlmYTFjYThkYjkwYTA2N2YyNmQ4YzVkMGI5ZmIxMjJlZTQ2MDEwNTE3M2RlZjVhNjRmZDBkZjI5NmNkMWU=:m147wACXk+nMYv23TxiB4aDA7a1540MiA/O2sQxRpgZD+iwkFf4E1GL6eKEpbQwibkmvDNFWfKi0NJ4ETJ5Dhw==f1234567890
 ```
 
-Or to run in detached mode (background):
+The access tokens are managed through a simple CLI tool that allows administrators to list, create, expire and delete tokens as needed. 
+Tokens are identified by a unique name. The CLI commands are as follows:
 
-```bash
-docker compose -f docker-compose.dev.yaml up -d
-```
+* `npm run token-manager list`: outputs a table with informations about all existing tokens;
+* `npm run token-manager create <name>`: creates a new token with the specified name; upon creation, the authorization token is displayed in the CLI output: copy and store it securely, as it will not be shown again;
+* `npm run token-manager expire <name>`: expires the specified token, making it invalid for future API requests;
+* `npm run token-manager delete <name>`: deletes an expired token permanently from the system;
+* `npm run token-manager delete-all-expired`: deletes all expired tokens permanently from the system.
 
-**Note**: The first startup will take a few minutes as it installs dependencies. Subsequent starts will be much faster as dependencies are cached in a Docker volume.
-
-The services will be available at:
-- **GraphQL Server**: `http://localhost:4000/graphql`
-- **MongoDB**: `mongodb://localhost:27017/config-server`
-
-### Stopping the Services
-
-To stop the services:
-
-```bash
-docker compose -f docker-compose.dev.yaml down
-```
-
-To stop and remove volumes (this will delete all data):
-
-```bash
-docker compose -f docker-compose.dev.yaml down -v
-```
-
-### Viewing Logs
-
-To view logs for all services:
-
-```bash
-docker compose -f docker-compose.dev.yaml logs -f
-```
-
-To view logs for a specific service:
-
-```bash
-docker compose -f docker-compose.dev.yaml logs -f app
-```
-
-### Development Features
-
-- **Hot Reload**: Changes to source files are automatically detected and the server restarts
-- **Persistent Data**: MongoDB data is persisted in Docker volumes
-- **Isolated Environment**: All dependencies are contained within Docker containers
-
-## Token Management
-
-Use the CLI tool to manage authentication tokens. Tokens are global and used by client applications to authenticate with the GraphQL server.
-
-### Create a token
-```bash
-npm run token create --name "My App Token"
-```
-
-### Create a token with expiration (30 days)
-```bash
-npm run token create --name "Temp Token" --expires 30
-```
-
-### List all tokens
-```bash
-npm run token list
-```
-
-### Revoke a token
-```bash
-npm run token revoke --token your-token-here
-```
-
-### Deactivate a token (without deleting)
-```bash
-npm run token deactivate --id token-id-here
-```
-
-## Database Seeding
-
-For development and testing purposes, you can populate the database with sample data using the seeding tool.
-
-### Bootstrap development environment (recommended)
-```bash
-npm run bootstrap-dev
-```
-
-This command will:
-1. Drop existing Configurations and Tokens collections
-2. Recreate collections with proper indexes
-3. Automatically seed all collections with test data
-
-This is the easiest way to reset your development database to a clean state with fresh test data.
-
-### Seed all collections with test data
-```bash
-npm run seed
-```
-
-This will create:
-- **Sample configurations** for 3 test users (alice, bob, charlie) with various settings like theme, language, notifications, etc.
-- **Default/fallback configurations** for common settings
-- **1000+ random configuration records** with diverse keys and values for performance testing
-- **Test tokens** for client applications (tokens will be displayed in the console output for easy access)
-
-### Seed specific collections only
-```bash
-# Seed only configurations
-npm run seed -- --collections configurations
-
-# Seed only tokens
-npm run seed -- --collections tokens
-```
-
-### Clear existing data before seeding
-```bash
-npm run seed -- --clear
-```
-
-This will delete all existing data in the collections before inserting the seed data.
-
-### Combine options
-```bash
-# Clear and seed only configurations
-npm run seed -- --clear --collections configurations
-```
-
-### Sample Seed Data
-
-The seeder creates the following test users:
-- **alice** - Uses dark theme, English language, email notifications
-- **bob** - Uses light theme, Spanish language, all notifications enabled
-- **charlie** - Uses auto theme, French language, accessibility settings enabled
-
-Additionally, the seeder generates **1000 random configuration records** using `@faker-js/faker` with:
-- Approximately 200 unique random user IDs
-- Various configuration keys (theme, language, timezone, notifications, dashboard settings, etc.)
-- Diverse data types (strings, numbers, booleans, objects)
-- Realistic test data for performance and load testing
-
-Multiple authentication tokens are created for client applications to use during testing.
 
 ## GraphQL API
 
-### Authentication
-
-Include the token in the Authorization header:
-```
-Authorization: Bearer your-token-here
-```
+The GraphQL API is extremely simple. It comprises one query for retrieving configurations and two mutations for creating/updating and deleting configurations.
 
 ### Queries
 
-#### Get configurations for a user
+**`configurations`** - Retrieve configurations for a user
+
+Fetch specific configurations by providing keys:
 ```graphql
-query GetConfigurations($userId: ID!, $keys: [String!]) {
-  configurations(userId: $userId, keys: $keys) {
-    key
-    userId
-    value
-    createdAt
-    updatedAt
-  }
+query {
+    configurations(userId: "user123", keys: ["theme", "language"]) {
+        userId
+        key
+        value
+    }
 }
 ```
 
-#### Get specific configurations by keys
+Fetch all configurations for a user:
 ```graphql
-query GetSpecificConfigurations($userId: ID!) {
-  configurations(userId: $userId, keys: ["theme", "language"]) {
-    key
-    userId
-    value
-    createdAt
-    updatedAt
-  }
+query {
+    configurations(userId: "user123") {
+        userId
+        key
+        value
+    }
+}
+```
+
+**Response Example:**
+```json
+{
+    "data": {
+        "configurations": [
+            {
+                "userId": "user123",
+                "key": "theme",
+                "value": {
+                    "mode": "dark",
+                    "primaryColor": "#3b82f6"
+                }
+            },
+            {
+                "userId": "user123",
+                "key": "language",
+                "value": {
+                    "locale": "en-US",
+                    "timezone": "America/New_York"
+                }
+            }
+        ]
+    }
 }
 ```
 
 ### Mutations
 
-#### Upsert a user configuration
+**`upsertConfiguration`** - Create or update a configuration
 ```graphql
-mutation UpsertConfiguration($key: String!, $value: JSON!, $userId: ID!) {
-  upsertConfiguration(key: $key, value: $value, userId: $userId) {
-    key
-    userId
-    value
-    updatedAt
-  }
-}
-```
-
-#### Upsert a default/fallback configuration
-```graphql
-mutation UpsertDefaultConfiguration($key: String!, $value: JSON!) {
-  upsertConfiguration(key: $key, value: $value) {
-    key
-    userId
-    value
-    updatedAt
-  }
-}
-```
-
-## Example Usage
-
-### Theme Configuration
-```graphql
-mutation SetTheme($userId: ID!) {
-  upsertConfiguration(
-    key: "theme"
-    userId: $userId
-    value: {
-      mode: "dark"
-      primaryColor: "#007acc"
-      fontSize: "medium"
+mutation {
+    upsertConfiguration(
+        userId: "user123"
+        key: "theme"
+        value: { mode: "dark", primaryColor: "#3b82f6" }
+    ) {
+        userId
+        key
+        value
     }
-  ) {
-    key
-    value
-    updatedAt
-  }
 }
 ```
 
-### Default Theme Configuration (Fallback)
+**`deleteConfiguration`** - Delete a configuration
 ```graphql
-mutation SetDefaultTheme {
-  upsertConfiguration(
-    key: "theme"
-    value: {
-      mode: "light"
-      primaryColor: "#ffffff"
-      fontSize: "medium"
-    }
-  ) {
-    key
-    value
-    updatedAt
-  }
+mutation {
+    deleteConfiguration(userId: "user123", key: "theme")
 }
 ```
-
-### Language Preference
-```graphql
-mutation SetLanguage($userId: ID!) {
-  upsertConfiguration(
-    key: "language"
-    userId: $userId
-    value: {
-      locale: "en-US"
-      timezone: "America/New_York"
-    }
-  ) {
-    key
-    value
-    updatedAt
-  }
-}
-```
-
-## Environment Variables
-
-- `MONGODB_URI` - MongoDB connection string
-- `PORT` - Server port (default: 4000)
-- `NODE_ENV` - Environment (development/production)
-
-## Testing
-
-Run the test suite:
-```bash
-npm test
-```
-
-## API Endpoints
-
-- **GraphQL Endpoint**: `POST /graphql`
-- **Health Check**: `GET /health`
-
-## Security
-
-- All GraphQL operations require authentication via Bearer token
-- Tokens are stored in MongoDB with optional expiration
-- Each configuration is isolated by user ID
-- No sensitive data should be stored (this is for UI preferences only)
-
-## License
-
-ISC
