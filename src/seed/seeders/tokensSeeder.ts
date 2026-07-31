@@ -11,7 +11,7 @@ export default async function seedTokens(): Promise<void> {
 
     await Promise.all(
         createTokenInputs.map(async (createTokenInput) => {
-            const createResult = await TokenModel.create(createTokenInput);
+            const createResult = await TokenModel.create(createTokenInput, true);
             console.log(`${createResult.token.name}: ${createResult.authorizationToken}\n`);
         })
     );
