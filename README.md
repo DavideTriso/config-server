@@ -1,112 +1,176 @@
 # Config Server
 
-A lightweight configuration management service that enables front-end applications to manage non-sensitive user-specific configurations through a GraphQL API. Ideal for persisting UI preferences, theme choices, and personalized application state across sessions and devices.
+A lightweight GraphQL service for storing and retrieving non-sensitive, user-specific application settings, such as UI preferences and personalized state. Each configuration is identified by the combination of `userId` and `key`.
 
-Configurations are uniquely identified by a combination of `userId` and `key`. Each user can maintain multiple configurations for different purposes.
+> Configuration `userId` values are supplied by API clients; they are not tied to the authorization token. Every valid token can access configurations for any user ID, so this service does not provide per-user access control.
 
-## Getting Started
+## Requirements
 
-//TODO
+- Node.js 20.19 or later
+- MongoDB, locally or remotely
+
+## Getting started
+
+1. Install dependencies and create a local environment file:
+
+   ```sh
+   npm ci
+   cp .env.example .env
+   ```
+
+2. Set `APP_SECRET` in `.env` to a strong, private value. The example file includes a placeholder; replace it before using the API. Keep this secret stable because it is used to validate authorization tokens.
+
+   `.env.example` also sets the default port and MongoDB connection string:
+
+   | Variable | Purpose | Default |
+   | --- | --- | --- |
+   | `PORT` | HTTP port for the GraphQL server | `4000` |
+   | `MONGODB_URI` | MongoDB connection string | `mongodb://localhost:27017/config-server` |
+   | `APP_SECRET` | Secret used to sign and verify authorization tokens | None; required |
+
+3. Make sure MongoDB is running at the configured URI. To start the MongoDB service from the included Compose file:
+
+   ```sh
+   docker compose -f docker-compose.dev.yaml up -d db
+   ```
+
+4. Start the server:
+
+   ```sh
+   npm run dev
+   ```
+
+   The GraphQL endpoint is `http://localhost:4000/` by default. Use `PORT` to select another port.
+
+For a compiled start, run `npm start`; this builds the TypeScript source and starts the server. `npm run build` builds without starting it.
+
+The full development Compose stack is also available with `docker compose -f docker-compose.dev.yaml up`. The app service must be given `APP_SECRET` in its Compose environment before using token management or authenticated API requests.
 
 ## Authorization
 
-The system implements a token-based authorization mechanism. Clients must include a valid token in the `Authorization` header of their requests with the format `Bearer <token>`.
+All GraphQL queries and mutations require a valid, unexpired token in the `Authorization` HTTP header. Set its authentication scheme to `Bearer` and provide the token value printed by the token manager.
 
-Tokens are valid system-wide and grant access to all configurations. They are designed for simplicity and ease of use, without user-specific permissions or scopes, making them ideal for internal applications or trusted clients. 
+Tokens are system-wide and have no user-specific permissions or scopes. Treat them as credentials: keep them private, do not expose them in client-side code, and do not commit them to source control.
 
-> NOTE: since tokens grant access to all configurations, they should be treated as sensitive credentials and stored securely. Only share tokens with trusted parties and avoid exposing them in client-side code or public repositories.
+Create a token with the token manager (the generated token is printed only once):
 
-For example:
+```sh
+npm run token-manager -- create local-development
 ```
-Authorization: Bearer abcdecHJvdmE=:ZTgyM2E4NWU0MTAxYmZlNWJiMWJmMDRlNjhiODE1ODk0N2IxMWYxNDY4YWMyNDk0OGQ5MjY3NTU4ZGFjNWY1NDY0MjlmYTFjYThkYjkwYTA2N2YyNmQ4YzVkMGI5ZmIxMjJlZTQ2MDEwNTE3M2RlZjVhNjRmZDBkZjI5NmNkMWU=:m147wACXk+nMYv23TxiB4aDA7a1540MiA/O2sQxRpgZD+iwkFf4E1GL6eKEpbQwibkmvDNFWfKi0NJ4ETJ5Dhw==f1234567890
+
+Use the printed value in the `Authorization` header. Token names must be unique and 3–30 characters long.
+
+### Token management
+
+The token manager connects to the MongoDB database specified by `MONGODB_URI` and supports:
+
+```sh
+npm run token-manager -- list
+npm run token-manager -- create <name>
+npm run token-manager -- expire <name>
+npm run token-manager -- delete <name>
+npm run token-manager -- delete-all-expired
 ```
 
-The access tokens are managed through a simple CLI tool that allows administrators to list, create, expire and delete tokens as needed. 
-Tokens are identified by a unique name. The CLI commands are as follows:
-
-* `npm run token-manager list`: outputs a table with informations about all existing tokens;
-* `npm run token-manager create <name>`: creates a new token with the specified name; upon creation, the authorization token is displayed in the CLI output: copy and store it securely, as it will not be shown again;
-* `npm run token-manager expire <name>`: expires the specified token, making it invalid for future API requests;
-* `npm run token-manager delete <name>`: deletes an expired token permanently from the system;
-* `npm run token-manager delete-all-expired`: deletes all expired tokens permanently from the system.
-
+- `list` shows token names and expiration status.
+- `create` prints the authorization token once. Store it securely; it cannot be retrieved later.
+- `expire` immediately makes a token unusable.
+- `delete` permanently removes a token only after it has been expired.
+- `delete-all-expired` permanently removes every expired token.
 
 ## GraphQL API
 
-The GraphQL API is extremely simple. It comprises one query for retrieving configurations and two mutations for creating/updating and deleting configurations.
+Send GraphQL requests to the server endpoint with the bearer token above. The API provides one query and two mutations.
 
-### Queries
+### Query configurations
 
-**`configurations`** - Retrieve configurations for a user
+Pass `keys` to retrieve only selected configurations. Omit it to retrieve all configurations for the user:
 
-Fetch specific configurations by providing keys:
 ```graphql
 query {
-    configurations(userId: "user123", keys: ["theme", "language"]) {
-        userId
-        key
-        value
-    }
+  configurations(userId: "user123", keys: ["theme", "language"]) {
+    userId
+    key
+    value
+    createdOnDateTime
+    lastUpdatedOnDateTime
+  }
 }
 ```
 
-Fetch all configurations for a user:
-```graphql
-query {
-    configurations(userId: "user123") {
-        userId
-        key
-        value
-    }
-}
-```
+Example response:
 
-**Response Example:**
 ```json
 {
-    "data": {
-        "configurations": [
-            {
-                "userId": "user123",
-                "key": "theme",
-                "value": {
-                    "mode": "dark",
-                    "primaryColor": "#3b82f6"
-                }
-            },
-            {
-                "userId": "user123",
-                "key": "language",
-                "value": {
-                    "locale": "en-US",
-                    "timezone": "America/New_York"
-                }
-            }
-        ]
-    }
+  "data": {
+    "configurations": [
+      {
+        "userId": "user123",
+        "key": "theme",
+        "value": {
+          "mode": "dark",
+          "primaryColor": "#3b82f6"
+        },
+        "createdOnDateTime": "2025-01-01T12:00:00.000Z",
+        "lastUpdatedOnDateTime": "2025-01-01T12:00:00.000Z"
+      }
+    ]
+  }
 }
 ```
 
-### Mutations
+### Create or update a configuration
 
-**`upsertConfiguration`** - Create or update a configuration
+`upsertConfiguration` creates the configuration if it does not exist, or replaces its value if it does. The `value` field accepts JSON:
+
 ```graphql
 mutation {
-    upsertConfiguration(
-        userId: "user123"
-        key: "theme"
-        value: { mode: "dark", primaryColor: "#3b82f6" }
-    ) {
-        userId
-        key
-        value
-    }
+  upsertConfiguration(
+    userId: "user123"
+    key: "theme"
+    value: { mode: "dark", primaryColor: "#3b82f6" }
+  ) {
+    userId
+    key
+    value
+    createdOnDateTime
+    lastUpdatedOnDateTime
+  }
 }
 ```
 
-**`deleteConfiguration`** - Delete a configuration
+### Delete a configuration
+
 ```graphql
 mutation {
-    deleteConfiguration(userId: "user123", key: "theme")
+  deleteConfiguration(userId: "user123", key: "theme")
 }
+```
+
+The mutation returns `true` when the request succeeds.
+
+Configuration upserts validate keys and user IDs as 1–200 characters containing only letters, numbers, or these characters: `@ _ - / \ | & . : # $ [ ] { } ( )`. Serialized configuration values may contain at most 50,000 characters. Do not store sensitive information in configuration values.
+
+## Administrative commands
+
+The configuration manager can delete configurations directly from the database without an API token. At least one filter is required; using only one filter deletes all configurations matching that key or user ID.
+
+```sh
+npm run configuration-manager -- delete --key theme --userId user123
+npm run configuration-manager -- delete --key theme
+npm run configuration-manager -- delete --userId user123
+```
+
+The seeder is intended for disposable development or test databases only. It deletes all existing tokens and configurations, then creates sample data and prints two new authorization tokens:
+
+```sh
+npm run seeder -- seed
+```
+
+## Tests
+
+Run the test suite with:
+
+```sh
+npm test
 ```
