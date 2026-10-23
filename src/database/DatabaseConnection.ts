@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
+import os from 'os';
 
 export default class DatabaseConnection {
 
@@ -50,7 +51,9 @@ export default class DatabaseConnection {
         try {
             if (DatabaseConnection.useMemoryServer) {
                 this.mongoMemoryServer = await MongoMemoryServer.create();
-                await mongoose.connect(this.mongoMemoryServer.getUri(), {});
+                await mongoose.connect(this.mongoMemoryServer.getUri(), {
+                    runtimeAdapters: { os },
+                });
             } else {
                 const uri = process.env.MONGODB_URI || '';
                 await mongoose.connect(process.env.MONGODB_URI || '', this.CONNECTION_OPTIONS);
