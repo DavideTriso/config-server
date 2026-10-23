@@ -149,7 +149,7 @@ mutation {
 
 The mutation returns `true` when the request succeeds.
 
-Configuration keys and user IDs must be 1–200 characters and may contain letters, numbers, and the supported punctuation characters. A serialized configuration value may contain at most 50,000 characters. Do not store sensitive information in configuration values.
+Configuration upserts validate keys and user IDs as 1–200 characters containing only letters, numbers, or these characters: `@ _ - / \ | & . : # $ [ ] { } ( )`. Serialized configuration values may contain at most 50,000 characters. Do not store sensitive information in configuration values.
 
 ## Administrative commands
 
